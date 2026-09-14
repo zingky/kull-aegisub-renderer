@@ -13,13 +13,12 @@ export default function HardwareSelect({ value, onChange, available }) {
   const ok = (id) => id === 'auto' || id === 'cpu' || available.includes(id)
 
   return (
-    <div className="mt-4">
-      <div className="flex items-center gap-2 mb-2">
-        <Gauge className="w-4 h-4 text-amber-400" />
-        <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wide">Phần Cứng Mã Hóa</h3>
-        <span className="text-[11px] text-slate-500">(tự phát hiện từ ffmpeg -encoders)</span>
+    <div className="mt-2">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <Gauge className="w-3.5 h-3.5 text-amber-400" />
+        <h3 className="text-[11px] font-bold text-slate-200 uppercase tracking-wide">Phần Cứng Mã Hóa</h3>
       </div>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+      <div className="grid grid-cols-5 gap-1.5">
         {OPTIONS.map((o) => {
           const enabled = ok(o.id)
           return (
@@ -27,7 +26,7 @@ export default function HardwareSelect({ value, onChange, available }) {
               key={o.id}
               onClick={() => enabled && onChange(o.id)}
               className={clsx(
-                'cursor-pointer rounded-lg border px-3 py-2 transition-colors text-center',
+                'cursor-pointer rounded-lg border px-1.5 py-1.5 transition-colors text-center',
                 !enabled && 'opacity-35 cursor-not-allowed',
                 value === o.id
                   ? 'border-amber-400 bg-amber-400/10'
@@ -35,30 +34,26 @@ export default function HardwareSelect({ value, onChange, available }) {
               )}
               title={enabled ? o.sub : 'Không phát hiện được encoder này trên máy'}
             >
-              <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center justify-center gap-1.5">
                 <span
                   className={clsx(
-                    'w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0',
+                    'w-3 h-3 rounded-full border-2 flex items-center justify-center shrink-0',
                     value === o.id ? 'border-amber-400' : 'border-slate-500'
                   )}
                 >
-                  {value === o.id && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
+                  {value === o.id && <span className="w-1 h-1 rounded-full bg-amber-400" />}
                 </span>
-                <span className={clsx('text-[13px] font-semibold', value === o.id ? 'text-amber-200' : 'text-slate-200')}>
+                <span className={clsx('text-[12px] font-semibold truncate', value === o.id ? 'text-amber-200' : 'text-slate-200')}>
                   {o.label}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">
-                {o.sub}
-                {!enabled && ' · không có'}
-              </p>
             </label>
           )
         })}
       </div>
       {value === 'auto' && (
-        <p className="mt-1.5 text-[11px] text-slate-500 flex items-center gap-1">
-          <Cpu className="w-3 h-3" /> Sẽ tự chọn theo thứ tự: NVENC → QSV → AMF → CPU.
+        <p className="mt-1 text-[10px] text-slate-600 flex items-center gap-1">
+          <Cpu className="w-3 h-3" /> Tự chọn: NVENC → QSV → AMF → CPU.
         </p>
       )}
     </div>

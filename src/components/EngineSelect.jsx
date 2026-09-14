@@ -22,36 +22,36 @@ const ENGINES = [
 export default function EngineSelect({ value, onChange }) {
   return (
     <div>
-      <div className="flex items-center gap-2 mb-2">
-        <Captions className="w-4 h-4 text-amber-400" />
-        <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wide">Engine Subtitle</h3>
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <Captions className="w-3.5 h-3.5 text-amber-400" />
+        <h3 className="text-[11px] font-bold text-slate-200 uppercase tracking-wide">Engine Subtitle</h3>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5">
         {ENGINES.map((e) => (
           <label
             key={e.id}
             onClick={() => onChange(e.id)}
             className={clsx(
-              'cursor-pointer rounded-lg border px-3 py-2 transition-colors',
+              'cursor-pointer rounded-lg border px-2 py-1.5 transition-colors',
               value === e.id
                 ? 'border-amber-400 bg-amber-400/10'
                 : 'border-slate-700 bg-slate-800/40 hover:border-slate-500'
             )}
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <span
                 className={clsx(
-                  'w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center shrink-0',
+                  'w-3 h-3 rounded-full border-2 flex items-center justify-center shrink-0',
                   value === e.id ? 'border-amber-400' : 'border-slate-500'
                 )}
               >
-                {value === e.id && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
+                {value === e.id && <span className="w-1 h-1 rounded-full bg-amber-400" />}
               </span>
-              <span className={clsx('text-sm font-semibold', value === e.id ? 'text-amber-200' : 'text-slate-200')}>
+              <span className={clsx('text-[12px] font-semibold truncate', value === e.id ? 'text-amber-200' : 'text-slate-200')}>
                 {e.label}
               </span>
             </div>
-            <p className="text-[11px] text-slate-400 ml-5 mt-0.5 leading-snug">{e.desc}</p>
+            <p className="hidden 2xl:block text-[10px] text-slate-500 ml-4 mt-px leading-tight truncate">{e.desc}</p>
           </label>
         ))}
       </div>

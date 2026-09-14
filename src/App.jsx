@@ -162,22 +162,20 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0b0f19]">
-      {/* ── Header ── */}
-      <header className="sticky top-0 z-20 bg-[#0f1526]/95 backdrop-blur border-b border-slate-800 px-5 py-3 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-900/40">
-            <Clapperboard className="w-5 h-5 text-slate-950" />
+    <div className="h-screen flex flex-col overflow-hidden bg-[#0b0f19]">
+      {/* ── Header gọn 1 dòng ── */}
+      <header className="shrink-0 z-20 bg-[#0f1526]/95 backdrop-blur border-b border-slate-800 px-4 py-2 flex items-center gap-3">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <div className="shrink-0 w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center">
+            <Clapperboard className="w-4 h-4 text-slate-950" />
           </div>
-          <div className="min-w-0">
-            <h1 className="text-lg font-extrabold tracking-tight text-white leading-tight">Kull Vietsub Renderer</h1>
-            <p className="text-[11px] text-slate-400 truncate">
-              Hardsub ASS/SRT bằng FFmpeg + VSFilter · {version ? `v${version}` : ''}
-            </p>
-          </div>
+          <h1 className="text-[13px] font-extrabold tracking-tight text-white leading-none truncate">
+            Kull Vietsub Renderer
+            <span className="ml-2 font-normal text-slate-500">Hardsub ASS/SRT · FFmpeg + VSFilter{version ? ` · v${version}` : ''}</span>
+          </h1>
         </div>
 
-        <div className="hidden lg:flex items-center gap-2 text-[11px] font-medium">
+        <div className="hidden xl:flex items-center gap-1.5 text-[10px] font-medium shrink-0">
           <span className="text-slate-500 mr-1">bin/</span>
           {[
             ['ffmpeg', binStatus?.ffmpeg],
@@ -201,12 +199,12 @@ export default function App() {
         </div>
       </header>
 
-      {/* ── Body ── */}
-      <main className="flex-1 w-full max-w-[1500px] mx-auto grid grid-cols-1 xl:grid-cols-[400px_1fr] gap-4 p-4">
+      {/* ── Body fit 1 màn hình: 2 cột scroll nội bộ ── */}
+      <main className="flex-1 min-h-0 w-full grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-3 p-3">
         {/* Cột trái: File nguồn (khu 1 + 5) */}
-        <div className="space-y-4">
-          <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-4 space-y-3">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center justify-between">
+        <div className="min-h-0 overflow-y-auto space-y-3 pr-0.5">
+          <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-3 space-y-2">
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 flex items-center justify-between">
               <span>1 · File Nguồn</span>
               <span className="text-[10px] text-slate-600 normal-case">4 ô kéo thả</span>
             </h2>
@@ -216,13 +214,13 @@ export default function App() {
             <DropZone slot="outro" file={files.outro} meta={metas.outro} disabled={!mergeEnabled} onFile={(p) => handleFile('outro', p)} onClear={() => handleClear('outro')} />
           </div>
 
-          <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-4">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">5 · Tùy Chọn Ghép Video</h2>
+          <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-3">
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">5 · Tùy Chọn Ghép Video</h2>
             <MergeToggle checked={mergeEnabled} onChange={setMergeEnabled} />
           </div>
 
           {binStatus && !binStatus.ffmpeg && !binStatus.ffprobe && (
-            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-[12px] text-amber-200 flex gap-2">
+            <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-2.5 text-[11px] text-amber-200 flex gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>
                 Thiếu <b>bin/ffmpeg.exe / ffprobe.exe</b>! Chạy <code>`npm run check:bin`</code> để xem hướng dẫn tải bản
@@ -233,20 +231,20 @@ export default function App() {
         </div>
 
         {/* Cột phải: cài đặt + điều khiển */}
-        <div className="space-y-4 min-w-0">
-          <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-4">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">2 · Engine Subtitle &amp; Phần Cứng</h2>
+        <div className="min-h-0 overflow-y-auto space-y-3 pr-0.5 min-w-0">
+          <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-3">
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">2 · Engine Subtitle &amp; Phần Cứng</h2>
             <EngineSelect value={engine} onChange={setEngine} />
             <HardwareSelect value={hardware} onChange={setHardware} available={availableEnc} />
           </div>
 
-          <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-4">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">3 · Chất Lượng Render</h2>
+          <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-3">
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">3 · Chất Lượng Render</h2>
             <QualitySelect value={quality} onChange={setQuality} custom={custom} onCustomChange={setCustom} />
           </div>
 
-          <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-4">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">4 · Output &amp; Điều Khiển</h2>
+          <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-3">
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">4 · Output &amp; Điều Khiển</h2>
             <OutputControls
               outputDir={outputDir}
               setOutputDir={setOutputDir}

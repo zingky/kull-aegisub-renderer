@@ -15,10 +15,10 @@ const DEV_URL = process.env.VITE_DEV_SERVER_URL
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1360,
-    height: 920,
+    width: 1300,
+    height: 860,
     minWidth: 1100,
-    minHeight: 720,
+    minHeight: 800,
     title: 'Kull Vietsub Renderer',
     backgroundColor: '#0b0f19',
     autoHideMenuBar: true,

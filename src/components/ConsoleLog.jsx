@@ -19,15 +19,15 @@ export default function ConsoleLog({ logs }) {
   }, [logs])
 
   return (
-    <div className="border-t border-slate-800 bg-[#0a0e17]">
-      <div className="flex items-center gap-2 px-4 py-2">
-        <Terminal className="w-4 h-4 text-amber-400" />
-        <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Console Log</span>
-        <span className="text-[11px] text-slate-600">FFmpeg stderr + thông báo hệ thống</span>
+      <div className="shrink-0 border-t border-slate-800 bg-[#0a0e17]">
+      <div className="flex items-center gap-2 px-3 pt-1.5 pb-1">
+        <Terminal className="w-3.5 h-3.5 text-amber-400" />
+        <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Console Log</span>
+        <span className="text-[10px] text-slate-600">FFmpeg stderr + thông báo hệ thống</span>
       </div>
       <div
         ref={ref}
-        className="log-text mx-4 mb-3 h-40 overflow-y-auto rounded-lg border border-slate-800 bg-black/40 p-3 text-[11.5px] leading-relaxed"
+        className="log-text mx-3 mb-2 h-[104px] overflow-y-auto rounded-lg border border-slate-800 bg-black/40 p-2.5 text-[11px] leading-relaxed"
       >
         {logs.length === 0 ? (
           <p className="text-slate-600 italic">— Chưa có log. Các thông báo sẽ xuất hiện tại đây —</p>

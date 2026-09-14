@@ -78,13 +78,12 @@ async function main() {
   const root = w.document.querySelector('#root')
   console.log('Sau khi mount, #root có', root.children.length, 'phần tử')
 
-  // Tìm đúng ô DropZone "File Video chính": phải là phần tử lá có onClick
-  // (class cursor-pointer của DropZone), không phải div tổ tiên chứa text.
-  const candidates = [...w.document.querySelectorAll('div.cursor-pointer')]
-    .filter((d) => d.textContent.includes('File Video chính'))
-  const dz = candidates[candidates.length - 1]
+  // Tìm đúng ô DropZone "File Video chính": phần tử có onClick (con trỏ pointer)
+  // chứa text label; lấy phần tử sâu nhất (lá) để click đúng handler.
+  const all = [...w.document.querySelectorAll('div')].filter((d) => d.textContent.includes('File Video chính'))
+  const dz = all[all.length - 1]
   if (!dz) { console.log('  ❌ Không tìm thấy DropZone'); process.exit(1) }
-  console.log('  → tìm thấy', candidates.length, 'ứng viên, class:', JSON.stringify(String(dz.className).slice(0, 90)))
+  console.log('  → tìm thấy', all.length, 'div chứa label, click phần tử sâu nhất')
   dz.dispatchEvent(new w.MouseEvent('click', { bubbles: true, cancelable: true }))
   console.log('  ✓ Đã click DropZone File Video chính')
 

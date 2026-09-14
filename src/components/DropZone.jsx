@@ -62,7 +62,7 @@ export default function DropZone({ slot, file, meta, onFile, onClear, required =
       onDragLeave={() => setDrag(false)}
       onDrop={handleDrop}
       className={clsx(
-        'group relative rounded-xl border-2 border-dashed p-4 transition-colors cursor-pointer select-none',
+        'relative rounded-lg border p-2 transition-colors cursor-pointer select-none',
         disabled && 'opacity-40 pointer-events-none',
         drag
           ? 'border-amber-400 bg-amber-400/10'
@@ -73,38 +73,45 @@ export default function DropZone({ slot, file, meta, onFile, onClear, required =
     >
       {/* Badge yêu cầu */}
       {required && (
-        <span className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/40">
+        <span className="absolute -top-2 right-2 text-[9px] font-bold px-1.5 py-px rounded bg-red-500/20 text-red-300 border border-red-500/40">
           BẮT BUỘC
         </span>
       )}
 
       {!file ? (
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2.5">
           <div
             className={clsx(
-              'shrink-0 w-11 h-11 rounded-lg flex items-center justify-center',
-              'bg-slate-700/60 text-slate-300 group-hover:text-amber-300 group-hover:bg-slate-700'
+              'shrink-0 w-8 h-8 rounded-md flex items-center justify-center',
+              'bg-slate-700/60 text-slate-300'
             )}
           >
-            {drag ? <UploadCloud className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+            {drag ? <UploadCloud className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
           </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-200">{LABELS[slot]}</p>
-            <p className="text-xs text-slate-500">
-              Kéo thả vào đây hoặc bấm để chọn · nhận {EXT_HINTS[slot]}
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-semibold text-slate-200 leading-tight">
+              {LABELS[slot]}{' '}
+              <span className="font-normal text-slate-500">· {EXT_HINTS[slot]}</span>
             </p>
+            {meta && (
+              <p className="text-[11px] text-slate-400 truncate">
+                {meta.width ? `${meta.width}×${meta.height}` : '??'} ·{' '}
+                {meta.fps ? `${meta.fps}fps` : '??fps'} ·{' '}
+                {formatDuration(meta.duration)} · {formatBytes(meta.sizeBytes)}
+              </p>
+            )}
           </div>
         </div>
       ) : (
-        <div className="flex items-center gap-3">
-          <div className="shrink-0 w-11 h-11 rounded-lg bg-emerald-500/15 text-emerald-300 flex items-center justify-center">
-            <Icon className="w-5 h-5" />
+        <div className="flex items-center gap-2.5">
+          <div className="shrink-0 w-8 h-8 rounded-md bg-emerald-500/15 text-emerald-300 flex items-center justify-center">
+            <Icon className="w-4 h-4" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-slate-100 truncate" title={file}>
+            <p className="text-[13px] font-semibold text-slate-100 truncate leading-tight" title={file}>
               {basename(file)}
             </p>
-            <p className="text-xs text-slate-400">
+            <p className="text-[11px] text-slate-400 truncate">
               {meta ? (
                 <>
                   {meta.width ? `${meta.width}×${meta.height}` : '??'} ·{' '}
