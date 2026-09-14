@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 import { Loader2, AlertTriangle, CheckCircle2, Gauge, Timer, Zap } from 'lucide-react'
-import { formatDuration } from '../utils/format'
+import { formatEta } from '../utils/format'
 
 export default function ProgressPanel({ status, progress, outputPath }) {
   const pct = Math.round(progress.pct * 10) / 10
@@ -32,7 +32,7 @@ export default function ProgressPanel({ status, progress, outputPath }) {
           </span>
           <span className="flex items-center gap-1">
             <Timer className="w-3 h-3 text-amber-400/80" />
-            Còn lại: <b className="text-slate-200">{progress.eta != null ? formatDuration(progress.eta) : '…'}</b>
+            Còn lại: <b className="text-slate-200">{progress.eta != null ? formatEta(progress.eta) : '…'}</b>
           </span>
         </div>
       </div>

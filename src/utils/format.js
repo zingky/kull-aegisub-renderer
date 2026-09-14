@@ -51,6 +51,20 @@ export function formatDuration(secs) {
   return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`
 }
 
+/** ETA dạng chữ rõ ràng: "1 giờ 23 phút 45 giây" */
+export function formatEta(secs) {
+  if (secs == null || !isFinite(secs) || secs <= 0) return '—'
+  secs = Math.round(secs)
+  const h = Math.floor(secs / 3600)
+  const m = Math.floor((secs % 3600) / 60)
+  const s = secs % 60
+  const parts = []
+  if (h > 0) parts.push(`${h} giờ`)
+  if (m > 0) parts.push(`${m} phút`)
+  if (s > 0 || parts.length === 0) parts.push(`${s} giây`)
+  return parts.join(' ')
+}
+
 export function formatTime(t) {
   try {
     const d = t instanceof Date ? t : new Date(t)

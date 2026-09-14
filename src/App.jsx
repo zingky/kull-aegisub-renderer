@@ -9,10 +9,13 @@ import MergeToggle from './components/MergeToggle'
 import OutputControls from './components/OutputControls'
 import ProgressPanel from './components/ProgressPanel'
 import ConsoleLog from './components/ConsoleLog'
-import { basename, dirname, extname, stripExt, withExt, formatDuration } from './utils/format'
+import { basename, dirname, extname, stripExt, withExt, formatDuration, formatBytes } from './utils/format'
 
 const renderAPI = window.renderAPI
 let logId = 0
+
+// Bucket tiến độ lần cuối được ghi ra log (mỗi 5% ghi 1 dòng thống kê)
+let lastLoggedBucket = -1
 
 export default function App() {
   const [files, setFiles] = useState({ main: null, subtitle: null, intro: null, outro: null })
@@ -46,14 +49,30 @@ export default function App() {
     renderAPI.getEncoders().then(setAvailableEnc).catch(() => {})
 
     const offs = [
-      renderAPI.onProgress((d) =>
+      renderAPI.onProgress((d) => {
         setProgress((p) => ({
           pct: d.progress ?? p.pct,
           fps: d.fps ?? p.fps,
           speed: d.speed ?? p.speed,
           eta: d.eta ?? p.eta,
         }))
-      ),
+        // Log thống kê chi tiết mỗi 5% tiến độ (frame/fps/tốc độ/time/bitrate/dung lượng)
+        const pct = d.progress ?? 0
+        const bucket = Math.floor(pct / 5)
+        if (bucket > lastLoggedBucket && (d.frame != null || d.fps != null)) {
+          lastLoggedBucket = bucket
+          const bits = [
+            `⚡ ${pct}%`,
+            d.frame != null ? `frame=${d.frame}` : null,
+            d.fps != null ? `fps=${d.fps.toFixed(1)}` : null,
+            d.speed != null ? `tốc=${d.speed.toFixed(2)}×` : null,
+            d.time ? `time=${d.time}` : null,
+            d.bitrate != null ? `bitrate=${Math.round(d.bitrate)}kbps` : null,
+            d.sizeKB != null ? `dung lượng=${formatBytes(d.sizeKB * 1024)}` : null,
+          ].filter(Boolean)
+          addLogRef.current(bits.join(' · '))
+        }
+      }),
       renderAPI.onLog((d) => addLogRef.current(d.line, d.level)),
       renderAPI.onDone((d) => {
         if (d.canceled) {
@@ -141,6 +160,7 @@ export default function App() {
     if (status === 'running') return
     if (!validate()) return
     setLogs([])
+    lastLoggedBucket = -1
     setResultPath('')
     setProgress({ pct: 0, fps: null, speed: null, eta: null })
     setStatus('running')

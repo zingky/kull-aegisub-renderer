@@ -86,6 +86,9 @@ function escapeFilterPath(p) {
 const RE_TIME = /time=(\d+):(\d+):(\d+(?:\.\d+)?)/
 const RE_FPS = /fps=\s*([\d.]+)/
 const RE_SPEED = /speed=\s*([\d.]+(?:\.\d+)?)x/
+const RE_FRAME = /frame=\s*(\d+)/
+const RE_BITRATE = /bitrate=\s*([\d.]+)(k|M)bits\/s/
+const RE_SIZE = /size=\s*(\d+)(k|M|G)?B/i
 
 function parseProgressLine(line, total) {
   const m = line.match(RE_TIME)
@@ -95,14 +98,27 @@ function parseProgressLine(line, total) {
   let fps = null
   let eta = null
   let speed = null
+  let frame = null
+  let bitrate = null // kb/s
+  let sizeKB = null
   const fm = line.match(RE_FPS)
   if (fm) fps = parseFloat(fm[1])
   const sm = line.match(RE_SPEED)
   if (sm) speed = parseFloat(sm[1])
+  const frm = line.match(RE_FRAME)
+  if (frm) frame = parseInt(frm[1], 10)
+  const bm = line.match(RE_BITRATE)
+  if (bm) bitrate = parseFloat(bm[1]) * (bm[2] === 'M' ? 1000 : 1)
+  const szm = line.match(RE_SIZE)
+  if (szm) {
+    const mult = szm[2] ? { k: 1, m: 1024, g: 1024 * 1024 }[szm[2].toLowerCase()] : 1
+    sizeKB = Math.round(parseFloat(szm[1]) * mult)
+  }
   const remaining = Math.max(0, total - secs)
   if (fps && fps > 0) eta = remaining / fps
   else if (speed && speed > 0) eta = remaining / speed
-  return { progress, fps, speed, eta }
+  const timeStr = `${m[1]}:${m[2]}:${m[3]}`
+  return { progress, fps, speed, eta, frame, bitrate, sizeKB, time: timeStr }
 }
 
 // ─────────────────────────────────────────────────────────────
