@@ -1,6 +1,4 @@
-import { useState } from 'react'
 import clsx from 'clsx'
-import { SlidersHorizontal } from 'lucide-react'
 
 const CHOICES = [
   {
@@ -31,38 +29,21 @@ const CHOICES = [
 ]
 
 export default function QualitySelect({ value, onChange, custom, onCustomChange }) {
-  const [showNote, setShowNote] = useState(false)
   const set = (k, v) => onCustomChange({ ...custom, [k]: v })
+  const byId = (id) => CHOICES.find((c) => c.id === id)
 
   return (
     <div>
-      <div className="grid grid-cols-2 xl:grid-cols-3 gap-1.5">
-        {CHOICES.map((c) => (
-          <label
-            key={c.id}
-            onClick={() => onChange(c.id)}
-            className={clsx(
-              'cursor-pointer rounded-lg border px-2 py-1 text-center transition-colors',
-              value === c.id
-                ? 'border-amber-400 bg-amber-400/10'
-                : 'border-slate-700 bg-slate-800/40 hover:border-slate-500'
-            )}
-            title={c.desc}
-          >
-            <div className="flex items-center justify-center gap-1.5">
-              <span
-                className={clsx(
-                  'w-3 h-3 rounded-full border-2 flex items-center justify-center shrink-0',
-                  value === c.id ? 'border-amber-400' : 'border-slate-500'
-                )}
-              >
-                {value === c.id && <span className="w-1 h-1 rounded-full bg-amber-400" />}
-              </span>
-              <span className={clsx('text-[12px] font-semibold truncate', value === c.id ? 'text-amber-200' : 'text-slate-200')}>
-                {c.title}
-              </span>
-            </div>
-          </label>
+      {/* Hàng 1: Cao · Cân bằng · Tiết kiệm */}
+      <div className="grid grid-cols-3 gap-1.5" id="qrow-presets">
+        {['high', 'balanced', 'small'].map((id) => (
+          <QualityOption key={id} c={byId(id)} active={value === id} onPick={() => onChange(id)} />
+        ))}
+      </div>
+      {/* Hàng 2: Giữ nguyên gốc · Tùy chỉnh */}
+      <div className="mt-1.5 grid grid-cols-2 gap-1.5" id="qrow-anchor">
+        {['original', 'custom'].map((id) => (
+          <QualityOption key={id} c={byId(id)} active={value === id} onPick={() => onChange(id)} />
         ))}
       </div>
 
@@ -108,7 +89,33 @@ export default function QualitySelect({ value, onChange, custom, onCustomChange 
           </p>
         </div>
       )}
-      {showNote && null}
     </div>
+  )
+}
+
+function QualityOption({ c, active, onPick }) {
+  return (
+    <label
+      onClick={onPick}
+      title={c.desc}
+      className={clsx(
+        'glass-btn cursor-pointer rounded-lg border px-2 py-1 text-center block',
+        active ? 'border-amber-400 bg-amber-400/10' : 'border-slate-700 bg-slate-800/40 hover:border-slate-500'
+      )}
+    >
+      <div className="flex items-center justify-center gap-1.5">
+        <span
+          className={clsx(
+            'w-3 h-3 rounded-full border-2 flex items-center justify-center shrink-0',
+            active ? 'border-amber-400' : 'border-slate-500'
+          )}
+        >
+          {active && <span className="w-1 h-1 rounded-full bg-amber-400" />}
+        </span>
+        <span className={clsx('text-[12px] font-semibold truncate', active ? 'text-amber-200' : 'text-slate-200')}>
+          {c.title}
+        </span>
+      </div>
+    </label>
   )
 }

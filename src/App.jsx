@@ -246,7 +246,7 @@ export default function App() {
             <QualitySelect value={quality} onChange={setQuality} custom={custom} onCustomChange={setCustom} />
           </div>
 
-          <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-3">
+          <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-3" id="sec4col">
             <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">4 · Output &amp; Điều Khiển</h2>
             <OutputControls
               outputDir={outputDir}
@@ -261,12 +261,13 @@ export default function App() {
               onOpenFolder={openFolder}
             />
             <ProgressPanel status={status} progress={progress} outputPath={resultPath} />
+            {/* Console log nằm gọn dưới mục 4 (trong cột phải) */}
+            <div className="mt-2">
+              <ConsoleLog logs={logs} embedded />
+            </div>
           </div>
         </div>
       </main>
-
-      {/* ── Console Log ── */}
-      <ConsoleLog logs={logs} />
     </div>
   )
 }

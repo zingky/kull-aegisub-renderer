@@ -62,7 +62,7 @@ export default function DropZone({ slot, file, meta, onFile, onClear, required =
       onDragLeave={() => setDrag(false)}
       onDrop={handleDrop}
       className={clsx(
-        'relative rounded-lg border p-2 transition-colors cursor-pointer select-none',
+        'glass-btn relative rounded-lg border p-2 cursor-pointer select-none',
         disabled && 'opacity-40 pointer-events-none',
         drag
           ? 'border-amber-400 bg-amber-400/10'

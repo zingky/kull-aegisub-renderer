@@ -31,3 +31,73 @@ body {
 .log-text {
   font-family: 'Cascadia Code', Consolas, 'Courier New', monospace;
 }
+
+/* ── Liquid Glass: nút bấm / radio / dropzone ───────────────────
+   Kính mờ + viền sáng + bóng đổ. Hover: bóng sáng trượt qua + viền
+   amber phát sáng. Active: nhấn chìm nhẹ. Không dùng backdrop-filter
+   (nặng GPU trong Electron) — chỉ gradient + shadow, mượt 60fps. */
+.glass-btn {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02) 45%, rgba(0, 0, 0, 0.12));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: transform 0.16s ease, box-shadow 0.22s ease, border-color 0.22s ease, filter 0.22s ease;
+}
+
+/* Vệt sáng bóng trượt qua khi hover */
+.glass-btn::after {
+  content: '';
+  position: absolute;
+  inset: -60% -30%;
+  background: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, 0.22) 50%, transparent 58%);
+  transform: translateX(-110%);
+  transition: transform 0.55s ease;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.glass-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    0 4px 14px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(251, 191, 36, 0.12),
+    0 0 14px rgba(251, 191, 36, 0.18);
+}
+
+.glass-btn:hover::after {
+  transform: translateX(110%);
+}
+
+.glass-btn:active {
+  transform: translateY(0) scale(0.985);
+  filter: brightness(0.96);
+  transition-duration: 0.06s;
+}
+
+/* Nút đang được chọn: viền amber phát sáng kiểu kính */
+.glass-btn.border-amber-400 {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(251, 191, 36, 0.35),
+    0 0 16px rgba(251, 191, 36, 0.22),
+    0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Tôn trọng người dùng giảm chuyển động */
+@media (prefers-reduced-motion: reduce) {
+  .glass-btn,
+  .glass-btn::after {
+    transition: none;
+  }
+  .glass-btn:hover {
+    transform: none;
+  }
+}

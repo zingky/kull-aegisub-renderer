@@ -65,7 +65,7 @@ export default function OutputControls({
                 onClick={() => setOutputFormat(f.id)}
                 title={f.desc}
                 className={clsx(
-                  'px-2 py-1 rounded-md border text-[11px] font-bold uppercase tracking-wide transition-colors',
+                  'glass-btn px-2 py-1 rounded-md border text-[11px] font-bold uppercase tracking-wide',
                   outputFormat === f.id
                     ? 'border-amber-400 bg-amber-400/10 text-amber-200'
                     : 'border-slate-700 bg-slate-800/40 text-slate-400 hover:border-slate-500 hover:text-slate-200'
@@ -84,7 +84,7 @@ export default function OutputControls({
           onClick={onStart}
           disabled={status === 'running'}
           className={clsx(
-            'flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-[13px] font-bold uppercase tracking-wider transition-all',
+            'glass-btn flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-[13px] font-bold uppercase tracking-wider',
             status === 'running'
               ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
               : 'bg-gradient-to-r from-amber-400 to-orange-600 text-slate-950 hover:brightness-110 active:scale-[0.99] shadow-lg shadow-orange-900/30'
@@ -96,7 +96,7 @@ export default function OutputControls({
         {status === 'running' && (
           <button
             onClick={onCancel}
-            className="flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-[13px] font-bold uppercase tracking-wider bg-red-500/15 text-red-300 border border-red-500/40 hover:bg-red-500/25 transition-all"
+            className="glass-btn flex-1 flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-[13px] font-bold uppercase tracking-wider bg-red-500/15 text-red-300 border border-red-500/40 hover:bg-red-500/25"
           >
             <Square className="w-4 h-4 fill-current" />
             HỦY
@@ -108,7 +108,7 @@ export default function OutputControls({
       {status === 'done' && (
         <button
           onClick={onOpenFolder}
-          className="mt-2 w-full flex items-center justify-center gap-2 rounded-lg px-4 py-1.5 text-[12px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/25 transition-all"
+          className="glass-btn mt-2 w-full flex items-center justify-center gap-2 rounded-lg px-4 py-1.5 text-[12px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/25"
         >
           <FolderUp className="w-3.5 h-3.5" /> Mở thư mục chứa file xuất
         </button>

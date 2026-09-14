@@ -1,0 +1,85 @@
+'use strict'
+/**
+ * checkQuality.js — kiểm tra layout mục 3: hàng presets 3 nút,
+ * hàng anchor 2 nút, thứ tự đúng, + class glass-btn trên các nút.
+ */
+const { JSDOM, VirtualConsole } = require('jsdom')
+const fs = require('fs')
+const path = require('path')
+
+const assetsDir = path.join(__dirname, '..', 'dist', 'assets')
+const jsBundle = fs.readdirSync(assetsDir).find((f) => f.endsWith('.js') && !f.endsWith('.map'))
+const bundleSrc = fs.readFileSync(path.join(assetsDir, jsBundle), 'utf8')
+
+const vc = new VirtualConsole()
+vc.on('error', () => {})
+const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
+  runScripts: 'outside-only',
+  pretendToBeVisual: true,
+  url: 'file:///repo/index.html',
+  virtualConsole: vc,
+})
+const w = dom.window
+w.renderAPI = {
+  getPathForFile: (f) => f.path || '',
+  probeMedia: async () => ({}),
+  selectFile: async () => null,
+  selectDir: async () => null,
+  startRender: async () => {},
+  cancelRender: () => {},
+  openFolder: async () => '',
+  checkBin: async () => ({ ffmpeg: true, ffprobe: true, vsfilter: true, vsfiltermod: true, avisynth: true }),
+  getEncoders: async () => ['cpu'],
+  getAppVersion: async () => '1.0.0-test',
+  onProgress: () => () => {},
+  onLog: () => () => {},
+  onDone: () => () => {},
+  onError: () => () => {},
+}
+for (const k of ['window', 'document', 'navigator', 'Node', 'HTMLElement', 'getComputedStyle',
+  'XMLHttpRequest', 'CustomEvent', 'Event', 'MouseEvent', 'File', 'Blob', 'URL']) {
+  if (w[k] === undefined) continue
+  try { global[k] = w[k] } catch {
+    try { Object.defineProperty(global, k, { value: w[k], configurable: true, writable: true }) } catch (e) {}
+  }
+}
+global.window = w
+
+async function main() {
+  w.eval(bundleSrc)
+  await new Promise((r) => setTimeout(r, 800))
+  const txt = (el) => el.textContent.replace(/\s+/g, ' ')
+  const has = (el, t) => txt(el).includes(t)
+  let fail = 0
+  const check = (c, m) => { console.log(`  ${c ? '✓' : '❌'} ${m}`); if (!c) fail++ }
+
+  const presets = w.document.querySelector('#qrow-presets')
+  const anchor = w.document.querySelector('#qrow-anchor')
+  check(!!presets && !!anchor, 'tồn tại 2 hàng #qrow-presets + #qrow-anchor')
+  if (presets) {
+    const items = [...presets.querySelectorAll(':scope > label')]
+    check(items.length === 3, `hàng 1 đúng 3 nút (thấy ${items.length})`)
+    check(has(presets, 'Chất lượng cao') && has(presets, 'Cân bằng') && has(presets, 'Tiết kiệm'), 'hàng 1: Cao · Cân bằng · Tiết kiệm')
+    check(!has(presets, 'Giữ nguyên gốc') && !has(presets, 'Tùy chỉnh'), 'hàng 1 không lẫn Giữ gốc/Tùy chỉnh')
+  }
+  if (anchor) {
+    const items = [...anchor.querySelectorAll(':scope > label')]
+    check(items.length === 2, `hàng 2 đúng 2 nút (thấy ${items.length})`)
+    check(has(anchor, 'Giữ nguyên gốc') && has(anchor, 'Tùy chỉnh'), 'hàng 2: Giữ nguyên gốc · Tùy chỉnh')
+  }
+  // Console log nằm trong cột phải (dưới mục 4), không còn footer full-width
+  const inCol = w.document.querySelector('#sec4col .log-text')
+  const footerLog = [...w.document.querySelectorAll('body > div > div.log-text, #root > div > div.log-text')]
+  check(!!inCol, 'console log nằm trong cột phải dưới mục 4')
+  // glass-btn: radio mục 2/3 + dropzone + nút format/render đều có
+  const glass = [...w.document.querySelectorAll('#root .glass-btn')]
+  check(glass.length >= 15, `glass-btn phủ đủ nút (thấy ${glass.length} phần tử, cần ≥15)`)
+  const css = fs.readFileSync(path.join(__dirname, '..', 'dist', 'assets',
+    fs.readdirSync(assetsDir).find((f) => f.endsWith('.css'))), 'utf8')
+  check(css.includes('.glass-btn'), 'CSS .glass-btn có trong bundle')
+  check(css.includes('prefers-reduced-motion'), 'có tôn trọng prefers-reduced-motion')
+  if (fail) { console.log(`\n❌ QUALITY/LOG/GLASS SAI (${fail})`); process.exit(1) }
+  console.log('\n✅ MỤC 3 + LOG + LIQUID GLASS ĐÚNG YÊU CẦU')
+  process.exit(0)
+}
+main().catch((e) => { console.error(e); process.exit(1) })

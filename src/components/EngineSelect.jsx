@@ -43,7 +43,7 @@ function EngineOption({ e, active, onPick }) {
     <label
       onClick={onPick}
       className={clsx(
-        'cursor-pointer rounded-lg border px-2 py-1.5 transition-colors block',
+        'glass-btn cursor-pointer rounded-lg border px-2 py-1.5 block',
         active ? 'border-amber-400 bg-amber-400/10' : 'border-slate-700 bg-slate-800/40 hover:border-slate-500'
       )}
     >

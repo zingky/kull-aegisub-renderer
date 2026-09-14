@@ -42,7 +42,7 @@ function HwOption({ o, active, enabled, onPick, wide = false }) {
     <label
       onClick={() => enabled && onPick()}
       className={clsx(
-        'cursor-pointer rounded-lg border px-1.5 py-1.5 transition-colors text-center block',
+        'glass-btn cursor-pointer rounded-lg border px-1.5 py-1.5 text-center block',
         !enabled && 'opacity-35 cursor-not-allowed',
         active ? 'border-amber-400 bg-amber-400/10' : 'border-slate-700 bg-slate-800/40 hover:border-slate-500'
       )}
