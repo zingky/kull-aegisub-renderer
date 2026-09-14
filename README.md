@@ -1,6 +1,8 @@
 # 🎬 Kull Vietsub Renderer
 
-Ứng dụng Desktop **Render Video Vietsub Hardsub** (đốt phụ đề ASS/SRT vào video) — **Electron + React + TailwindCSS**, lõi render bằng **FFmpeg + VSFilter (AviSynth+)**.
+Ứng dụng Desktop **Render Video Vietsub Hardsub** — ghép cứng phụ đề ASS/SRT **thẳng vào hình ảnh** của video — **Electron + React + TailwindCSS**, lõi render bằng **FFmpeg + VSFilter (AviSynth+)**.
+
+> 💡 **Hardsub là gì?** Là cách "in" phụ đề **cố định vào từng khung hình** của video khi render. File xuất ra mở bằng trình phát nào cũng tự hiện sub, **không cần mang theo file `.ass`/`.srt` rời** và **không thể tắt đi** (khác với *softsub* — sub rời dạng track, có thể bật/tắt trong trình phát). Cách gọi nôm na trong cộng đồng subber là *"đốt sub"* — đó cũng chính là việc app này làm.
 
 > ⚠️ Dự án ban đầu nhắm tới Tauri, nhưng máy hiện tại **chưa cài Rust/Cargo** → chuyển sang **Electron + React** (phương án thay thế được phép của đề bài).
 
