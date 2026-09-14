@@ -222,7 +222,7 @@ export default function App() {
             <DropZone slot="outro" file={files.outro} meta={metas.outro} disabled={!mergeEnabled} onFile={(p) => handleFile('outro', p)} onClear={() => handleClear('outro')} />
           </div>
 
-          <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-3">
+          <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-3" id="sec2">
             <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">2 · Engine Subtitle &amp; Phần Cứng</h2>
             <EngineSelect value={engine} onChange={setEngine} />
             <HardwareSelect value={hardware} onChange={setHardware} available={availableEnc} />
