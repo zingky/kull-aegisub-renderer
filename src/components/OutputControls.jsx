@@ -1,11 +1,21 @@
 import clsx from 'clsx'
-import { FolderOpen, Play, Square, Folder, FolderUp } from 'lucide-react'
+import { FolderOpen, Play, Square, FolderUp } from 'lucide-react'
+
+const FORMATS = [
+  { id: 'mp4', label: 'MP4', desc: 'Phổ biến nhất · xem mọi nơi, up Youtube/Facebook' },
+  { id: 'mkv', label: 'MKV', desc: 'Chất lượng cao · giữ nhiều track audio/sub' },
+  { id: 'mov', label: 'MOV', desc: 'Chuẩn Apple · dựng phim Final Cut/Premiere' },
+  { id: 'webm', label: 'WebM', desc: 'Nhẹ · tối ưu phát trực tuyến trên web' },
+  { id: 'avi', label: 'AVI', desc: 'Tương thích máy cũ, đầu phát cổ' },
+]
 
 export default function OutputControls({
   outputDir,
   setOutputDir,
   outputName,
   setOutputName,
+  outputFormat,
+  setOutputFormat,
   status,
   onStart,
   onCancel,
@@ -18,13 +28,8 @@ export default function OutputControls({
 
   return (
     <div>
-      <div className="flex items-center gap-1.5 mb-1.5">
-        <Folder className="w-3.5 h-3.5 text-amber-400" />
-        <h3 className="text-[11px] font-bold text-slate-200 uppercase tracking-wide">Output & Điều Khiển</h3>
-      </div>
-
-      {/* Thư mục lưu + tên file trên cùng 1 dòng */}
-      <div className="grid grid-cols-2 gap-2">
+      {/* Thư mục lưu + tên file + định dạng trên cùng 1 dòng */}
+      <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
         <div className="min-w-0">
           <label className="text-[10px] font-semibold text-slate-500">Thư mục lưu</label>
           <div className="mt-0.5 flex gap-1.5">
@@ -47,9 +52,29 @@ export default function OutputControls({
           <input
             value={outputName}
             onChange={(e) => setOutputName(e.target.value)}
-            placeholder="<tên_gốc>_exported.<đuôi_gốc>"
+            placeholder="<tên_gốc>_exported"
             className="mt-0.5 w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-[12px] text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
           />
+        </div>
+        <div className="min-w-0">
+          <label className="text-[10px] font-semibold text-slate-500">Định dạng</label>
+          <div className="mt-0.5 flex gap-1">
+            {FORMATS.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setOutputFormat(f.id)}
+                title={f.desc}
+                className={clsx(
+                  'px-2 py-1 rounded-md border text-[11px] font-bold uppercase tracking-wide transition-colors',
+                  outputFormat === f.id
+                    ? 'border-amber-400 bg-amber-400/10 text-amber-200'
+                    : 'border-slate-700 bg-slate-800/40 text-slate-400 hover:border-slate-500 hover:text-slate-200'
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

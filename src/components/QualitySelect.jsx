@@ -36,10 +36,6 @@ export default function QualitySelect({ value, onChange, custom, onCustomChange 
 
   return (
     <div>
-      <div className="flex items-center gap-1.5 mb-1.5">
-        <SlidersHorizontal className="w-3.5 h-3.5 text-amber-400" />
-        <h3 className="text-[11px] font-bold text-slate-200 uppercase tracking-wide">Chất Lượng Render</h3>
-      </div>
       <div className="grid grid-cols-2 xl:grid-cols-3 gap-1.5">
         {CHOICES.map((c) => (
           <label

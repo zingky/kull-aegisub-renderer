@@ -14,10 +14,6 @@ export default function HardwareSelect({ value, onChange, available }) {
 
   return (
     <div className="mt-2">
-      <div className="flex items-center gap-1.5 mb-1.5">
-        <Gauge className="w-3.5 h-3.5 text-amber-400" />
-        <h3 className="text-[11px] font-bold text-slate-200 uppercase tracking-wide">Phần Cứng Mã Hóa</h3>
-      </div>
       <div className="grid grid-cols-5 gap-1.5">
         {OPTIONS.map((o) => {
           const enabled = ok(o.id)

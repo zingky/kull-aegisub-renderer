@@ -9,7 +9,7 @@ import MergeToggle from './components/MergeToggle'
 import OutputControls from './components/OutputControls'
 import ProgressPanel from './components/ProgressPanel'
 import ConsoleLog from './components/ConsoleLog'
-import { basename, dirname, extname, stripExt, formatDuration } from './utils/format'
+import { basename, dirname, extname, stripExt, withExt, formatDuration } from './utils/format'
 
 const renderAPI = window.renderAPI
 let logId = 0
@@ -25,6 +25,7 @@ export default function App() {
   const [mergeEnabled, setMergeEnabled] = useState(false)
   const [outputDir, setOutputDir] = useState('')
   const [outputName, setOutputName] = useState('')
+  const [outputFormat, setOutputFormat] = useState('mp4')
   const [status, setStatus] = useState('idle') // idle | running | done | error
   const [progress, setProgress] = useState({ pct: 0, fps: null, speed: null, eta: null })
   const [logs, setLogs] = useState([])
@@ -93,8 +94,8 @@ export default function App() {
         )
         if (slot === 'main') {
           setOutputDir(dirname(p))
-          const ext = extname(p) || 'mp4'
-          setOutputName(`${stripExt(name)}_exported.${ext}`)
+          // Tên gợi ý bỏ đuôi gốc — đuôi thật do nút Định dạng quyết định
+          setOutputName(`${stripExt(name)}_exported`)
         }
       } catch (e) {
         setMetas((m) => ({ ...m, [slot]: null }))
@@ -153,7 +154,8 @@ export default function App() {
         hardware,
         quality,
         custom,
-        outputPath: `${outputDir}\\${outputName}`,
+        // Ép đuôi file xuất theo định dạng đã chọn (mp4/mkv/mov/webm/avi)
+        outputPath: withExt(`${outputDir}\\${outputName}`, `.${outputFormat}`),
       })
     } catch (e) {
       setStatus('error')
@@ -210,13 +212,20 @@ export default function App() {
             </h2>
             <DropZone slot="main" file={files.main} meta={metas.main} required onFile={(p) => handleFile('main', p)} onClear={() => handleClear('main')} />
             <DropZone slot="subtitle" file={files.subtitle} meta={metas.subtitle} required onFile={(p) => handleFile('subtitle', p)} onClear={() => handleClear('subtitle')} />
+            <div className="flex items-center gap-1.5 text-[10px] text-slate-600 px-0.5">
+              <span className="flex-1 border-t border-dashed border-slate-700/60" />
+              <span className="shrink-0">đoạn đầu / đoạn cuối (tùy chọn)</span>
+              <span className="flex-1 border-t border-dashed border-slate-700/60" />
+            </div>
+            <MergeToggle checked={mergeEnabled} onChange={setMergeEnabled} />
             <DropZone slot="intro" file={files.intro} meta={metas.intro} disabled={!mergeEnabled} onFile={(p) => handleFile('intro', p)} onClear={() => handleClear('intro')} />
             <DropZone slot="outro" file={files.outro} meta={metas.outro} disabled={!mergeEnabled} onFile={(p) => handleFile('outro', p)} onClear={() => handleClear('outro')} />
           </div>
 
           <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-3">
-            <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">5 · Tùy Chọn Ghép Video</h2>
-            <MergeToggle checked={mergeEnabled} onChange={setMergeEnabled} />
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">2 · Engine Subtitle &amp; Phần Cứng</h2>
+            <EngineSelect value={engine} onChange={setEngine} />
+            <HardwareSelect value={hardware} onChange={setHardware} available={availableEnc} />
           </div>
 
           {binStatus && !binStatus.ffmpeg && !binStatus.ffprobe && (
@@ -230,14 +239,8 @@ export default function App() {
           )}
         </div>
 
-        {/* Cột phải: cài đặt + điều khiển */}
+          {/* Cột phải: chất lượng + output */}
         <div className="min-h-0 overflow-y-auto space-y-3 pr-0.5 min-w-0">
-          <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-3">
-            <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">2 · Engine Subtitle &amp; Phần Cứng</h2>
-            <EngineSelect value={engine} onChange={setEngine} />
-            <HardwareSelect value={hardware} onChange={setHardware} available={availableEnc} />
-          </div>
-
           <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-3">
             <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">3 · Chất Lượng Render</h2>
             <QualitySelect value={quality} onChange={setQuality} custom={custom} onCustomChange={setCustom} />
@@ -250,6 +253,8 @@ export default function App() {
               setOutputDir={setOutputDir}
               outputName={outputName}
               setOutputName={setOutputName}
+              outputFormat={outputFormat}
+              setOutputFormat={setOutputFormat}
               status={status}
               onStart={handleStart}
               onCancel={() => renderAPI.cancelRender()}

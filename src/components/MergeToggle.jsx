@@ -5,6 +5,7 @@ export default function MergeToggle({ checked, onChange }) {
   return (
     <label
       onClick={() => onChange(!checked)}
+      title="Intro/Outro sẽ được tự động Scale + Pad về đúng độ phân giải & FPS của video chính, rồi ghép bằng filter concat."
       className={clsx(
         'flex items-center gap-2 cursor-pointer rounded-lg border px-2.5 py-2 transition-colors select-none',
         checked ? 'border-amber-400/70 bg-amber-400/10' : 'border-slate-700 bg-slate-800/40 hover:border-slate-500'
@@ -24,7 +25,7 @@ export default function MergeToggle({ checked, onChange }) {
       </span>
       <span className="flex items-center gap-1.5 text-[12px] font-bold text-slate-100 truncate">
         <GitMerge className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-        Kích hoạt ghép Intro/Outro vào Video chính
+        Ghép Intro/Outro vào Video chính
       </span>
     </label>
   )

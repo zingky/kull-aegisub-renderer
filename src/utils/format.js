@@ -19,8 +19,14 @@ export function extname(p) {
 }
 
 export function stripExt(name) {
+  name = String(name ?? '')
   const i = name.lastIndexOf('.')
   return i >= 0 ? name.slice(0, i) : name
+}
+
+export function withExt(name, ext) {
+  ext = String(ext || '').startsWith('.') ? String(ext) : `.${ext}`
+  return `${stripExt(String(name ?? '').trim() || 'output')}${ext.toLowerCase()}`
 }
 
 export function formatBytes(bytes) {
