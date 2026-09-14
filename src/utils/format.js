@@ -46,5 +46,11 @@ export function formatDuration(secs) {
 }
 
 export function formatTime(t) {
-  return new Date(t).toLocaleTimeString('vi-VN')
+  try {
+    const d = t instanceof Date ? t : new Date(t)
+    if (isNaN(d.getTime())) return ''
+    return d.toLocaleTimeString('vi-VN', { hour12: false })
+  } catch {
+    return ''
+  }
 }

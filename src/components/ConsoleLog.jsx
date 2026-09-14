@@ -32,10 +32,10 @@ export default function ConsoleLog({ logs }) {
         {logs.length === 0 ? (
           <p className="text-slate-600 italic">— Chưa có log. Các thông báo sẽ xuất hiện tại đây —</p>
         ) : (
-          logs.map((l, i) => (
-            <p key={i} className={clsx('whitespace-pre-wrap break-all', LEVEL_STYLE[l.level] || LEVEL_STYLE.info)}>
-              <span className="text-slate-600 select-none">[{l.time}] </span>
-              {l.text}
+          logs.map((l) => (
+            <p key={l.id ?? l.time} className={clsx('whitespace-pre-wrap break-all', LEVEL_STYLE[l.level] || LEVEL_STYLE.info)}>
+              <span className="text-slate-600 select-none">[{formatTime(l.time)}] </span>
+              {String(l.text ?? '')}
             </p>
           ))
         )}
