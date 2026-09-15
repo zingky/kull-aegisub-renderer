@@ -1,6 +1,6 @@
-# 🎬 Kull Vietsub Renderer
+# 🎬 Kull Aegisub Renderer
 
-Ứng dụng Desktop **Render Video Vietsub Hardsub** — ghép cứng phụ đề ASS/SRT **thẳng vào hình ảnh** của video — **Electron + React + TailwindCSS**, lõi render bằng **FFmpeg + VSFilter (AviSynth+)**.
+Ứng dụng Desktop **Render Video Aegisub Hardsub** — ghép cứng phụ đề ASS/SRT **thẳng vào hình ảnh** của video — **Electron + React + TailwindCSS**, lõi render bằng **FFmpeg + VSFilter (AviSynth+)**.
 
 > 💡 **Hardsub là gì?** Là cách "in" phụ đề **cố định vào từng khung hình** của video khi render. File xuất ra mở bằng trình phát nào cũng tự hiện sub, **không cần mang theo file `.ass`/`.srt` rời** và **không thể tắt đi** (khác với **Softsub** — track phụ đề rời, có thể bật/tắt trong trình phát).
 
