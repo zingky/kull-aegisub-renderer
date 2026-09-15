@@ -2,6 +2,8 @@
 
 Ứng dụng Desktop **Render Video Aegisub Hardsub** — ghép cứng phụ đề ASS/SRT **thẳng vào hình ảnh** của video — **Electron + React + TailwindCSS**, lõi render bằng **FFmpeg + VSFilter (AviSynth+)**.
 
+<img width="2556" height="1512" alt="image" src="https://github.com/user-attachments/assets/b6461381-cecc-4ef3-af4a-22b3be0c4f76" />
+
 > 💡 **Hardsub là gì?** Là cách "in" phụ đề **cố định vào từng khung hình** của video khi render. File xuất ra mở bằng trình phát nào cũng tự hiện sub, **không cần mang theo file `.ass`/`.srt` rời** và **không thể tắt đi** (khác với **Softsub** — track phụ đề rời, có thể bật/tắt trong trình phát).
 
 > ⚠️ Dự án ban đầu nhắm tới Tauri, nhưng máy hiện tại **chưa cài Rust/Cargo** → chuyển sang **Electron + React** (phương án thay thế được phép của đề bài).
