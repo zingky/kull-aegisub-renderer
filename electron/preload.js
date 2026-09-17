@@ -16,12 +16,12 @@ contextBridge.exposeInMainWorld('renderAPI', {
   // Lấy đường dẫn tuyệt đối của File kéo-thả (Electron >= 29 không còn file.path)
   getPathForFile: (file) => webUtils.getPathForFile(file),
 
-  // IPC: probe đọc thông số media
-  probeMedia: (filePath) => ipcRenderer.invoke('probe-media', filePath),
+  // IPC: probe đọc thông số media (kèm ngôn ngữ để thông báo lỗi đúng ngôn ngữ UI)
+  probeMedia: (filePath, lang) => ipcRenderer.invoke('probe-media', filePath, lang),
 
   // IPC: hộp thoại chọn file / chọn thư mục
   selectFile: (opts) => ipcRenderer.invoke('select-file', opts),
-  selectDir: () => ipcRenderer.invoke('select-dir'),
+  selectDir: (lang) => ipcRenderer.invoke('select-dir', lang),
 
   // IPC: render / hủy / mở thư mục / kiểm tra bin
   startRender: (options) => ipcRenderer.invoke('render:start', options),

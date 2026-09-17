@@ -1,11 +1,11 @@
 import clsx from 'clsx'
 import { GitMerge } from 'lucide-react'
 
-export default function MergeToggle({ checked, onChange }) {
+export default function MergeToggle({ checked, onChange, t }) {
   return (
     <label
       onClick={() => onChange(!checked)}
-      title="Intro/Outro sẽ được tự động Scale + Pad về đúng độ phân giải & FPS của video chính, rồi ghép bằng filter concat."
+      title={t('merge.tip')}
       className={clsx(
         'glass-btn flex items-center gap-2 cursor-pointer rounded-lg border px-2.5 py-2 select-none',
         checked ? 'border-amber-400/70 bg-amber-400/10' : 'border-slate-700 bg-slate-800/40 hover:border-slate-500'
@@ -25,7 +25,7 @@ export default function MergeToggle({ checked, onChange }) {
       </span>
       <span className="flex items-center gap-1.5 text-[12px] font-bold text-slate-100 truncate">
         <GitMerge className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-        Ghép Intro/Outro vào Video chính
+        {t('merge.label')}
       </span>
     </label>
   )

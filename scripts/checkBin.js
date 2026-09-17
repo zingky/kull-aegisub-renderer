@@ -25,7 +25,7 @@ const REQUIRED = [
 const binDir = path.join(__dirname, '..', 'bin')
 
 console.log('='.repeat(64))
-console.log('  KIỂM TRA THƯ MỤC BIN/ — Kull Vietsub Renderer')
+console.log('  KIỂM TRA THƯ MỤC BIN/ — Kull Aegisub Renderer')
 console.log('='.repeat(64))
 console.log(`Thư mục: ${binDir}\n`)
 

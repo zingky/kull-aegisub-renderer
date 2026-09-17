@@ -3,11 +3,8 @@ import clsx from 'clsx'
 import { FileVideo, FileText, Clapperboard, UploadCloud, X, Image } from 'lucide-react'
 import { basename, formatBytes, formatDuration } from '../utils/format'
 
-const VIDEO_FILTERS = [
-  { name: 'Video', extensions: ['mp4', 'mkv', 'avi', 'mov', 'm4v', 'wmv', 'webm', 'ts', 'flv', 'mpg', 'mpeg'] },
-  { name: 'Tất cả', extensions: ['*'] },
-]
-const SUBTITLE_FILTERS = [{ name: 'Subtitle', extensions: ['ass', 'ssa', 'srt'] }]
+const VIDEO_EXTS = ['mp4', 'mkv', 'avi', 'mov', 'm4v', 'wmv', 'webm', 'ts', 'flv', 'mpg', 'mpeg']
+const SUBTITLE_EXTS = ['ass', 'ssa', 'srt']
 
 const ICONS = {
   main: FileVideo,
@@ -16,11 +13,11 @@ const ICONS = {
   outro: Clapperboard,
 }
 
-const LABELS = {
-  main: 'File Video chính',
-  subtitle: 'File Subtitle',
-  intro: 'File Video Intro (ghép đầu)',
-  outro: 'File Video Outro (ghép cuối)',
+const LABEL_KEYS = {
+  main: 'dz.main',
+  subtitle: 'dz.subtitle',
+  intro: 'dz.intro',
+  outro: 'dz.outro',
 }
 
 const EXT_HINTS = {
@@ -30,16 +27,23 @@ const EXT_HINTS = {
   outro: '.mp4 .mkv .avi ...',
 }
 
-export default function DropZone({ slot, file, meta, onFile, onClear, required = false, disabled = false }) {
+export default function DropZone({ slot, file, meta, onFile, onClear, required = false, disabled = false, t }) {
   const [drag, setDrag] = useState(false)
   const Icon = ICONS[slot] || FileVideo
   const isVideo = slot !== 'subtitle'
+  const label = t(LABEL_KEYS[slot])
 
   const browse = async () => {
     if (disabled) return
+    const filters = isVideo
+      ? [
+          { name: t('dz.filterVideo'), extensions: VIDEO_EXTS },
+          { name: t('dz.filterAll'), extensions: ['*'] },
+        ]
+      : [{ name: t('dz.filterSubtitle'), extensions: SUBTITLE_EXTS }]
     const picked = await window.renderAPI.selectFile({
-      title: `Chọn ${LABELS[slot]}`,
-      filters: isVideo ? VIDEO_FILTERS : SUBTITLE_FILTERS,
+      title: t('dz.dialogTitle', { label }),
+      filters,
     })
     if (picked) onFile(picked)
   }
@@ -74,7 +78,7 @@ export default function DropZone({ slot, file, meta, onFile, onClear, required =
       {/* Badge yêu cầu */}
       {required && (
         <span className="absolute -top-2 right-2 text-[9px] font-bold px-1.5 py-px rounded bg-red-500/20 text-red-300 border border-red-500/40">
-          BẮT BUỘC
+          {t('dz.required')}
         </span>
       )}
 
@@ -90,8 +94,7 @@ export default function DropZone({ slot, file, meta, onFile, onClear, required =
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[13px] font-semibold text-slate-200 leading-tight">
-              {LABELS[slot]}{' '}
-              <span className="font-normal text-slate-500">· {EXT_HINTS[slot]}</span>
+              {label} <span className="font-normal text-slate-500">· {EXT_HINTS[slot]}</span>
             </p>
             {meta && (
               <p className="text-[11px] text-slate-400 truncate">
@@ -119,9 +122,9 @@ export default function DropZone({ slot, file, meta, onFile, onClear, required =
                   {formatDuration(meta.duration)} · {formatBytes(meta.sizeBytes)}
                 </>
               ) : isVideo ? (
-                <span className="text-amber-300/80">đang phân tích…</span>
+                <span className="text-amber-300/80">{t('dz.analyzing')}</span>
               ) : (
-                'subtitle đã sẵn sàng'
+                t('dz.subtitleReady')
               )}
             </p>
           </div>
@@ -131,7 +134,7 @@ export default function DropZone({ slot, file, meta, onFile, onClear, required =
               onClear?.()
             }}
             className="shrink-0 p-1.5 rounded-md text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-            title="Xóa file"
+            title={t('dz.remove')}
           >
             <X className="w-4 h-4" />
           </button>
@@ -141,7 +144,7 @@ export default function DropZone({ slot, file, meta, onFile, onClear, required =
         <div className="absolute inset-0 bg-slate-950/40 rounded-xl flex items-center justify-center">
           <span className="text-[11px] font-medium text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded-full border border-slate-700">
             <Image className="inline w-3 h-3 mr-1 -mt-0.5" />
-            Cần bật "Ghép Intro/Outro"
+            {t('dz.needMerge')}
           </span>
         </div>
       )}

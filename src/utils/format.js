@@ -51,25 +51,26 @@ export function formatDuration(secs) {
   return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`
 }
 
-/** ETA dạng chữ rõ ràng: "1 giờ 23 phút 45 giây" */
-export function formatEta(secs) {
+/** ETA dạng chữ rõ ràng: vi "1 giờ 23 phút 45 giây" · en "1 h 23 min 45 s" */
+export function formatEta(secs, t) {
   if (secs == null || !isFinite(secs) || secs <= 0) return '—'
   secs = Math.round(secs)
   const h = Math.floor(secs / 3600)
   const m = Math.floor((secs % 3600) / 60)
   const s = secs % 60
+  const T = typeof t === 'function' ? t : null
   const parts = []
-  if (h > 0) parts.push(`${h} giờ`)
-  if (m > 0) parts.push(`${m} phút`)
-  if (s > 0 || parts.length === 0) parts.push(`${s} giây`)
+  if (h > 0) parts.push(T ? T('eta.hour', { n: h }) : `${h} h`)
+  if (m > 0) parts.push(T ? T('eta.min', { n: m }) : `${m} min`)
+  if (s > 0 || parts.length === 0) parts.push(T ? T('eta.sec', { n: s }) : `${s} s`)
   return parts.join(' ')
 }
 
-export function formatTime(t) {
+export function formatTime(t, lang) {
   try {
     const d = t instanceof Date ? t : new Date(t)
     if (isNaN(d.getTime())) return ''
-    return d.toLocaleTimeString('vi-VN', { hour12: false })
+    return d.toLocaleTimeString(lang === 'en' ? 'en-US' : 'vi-VN', { hour12: false })
   } catch {
     return ''
   }

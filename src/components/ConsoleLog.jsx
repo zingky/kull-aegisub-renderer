@@ -10,7 +10,7 @@ const LEVEL_STYLE = {
   success: 'text-emerald-400',
 }
 
-export default function ConsoleLog({ logs, embedded = false }) {
+export default function ConsoleLog({ logs, embedded = false, lang = 'vi', t }) {
   const ref = useRef(null)
   const [copied, setCopied] = useState(false)
 
@@ -21,7 +21,7 @@ export default function ConsoleLog({ logs, embedded = false }) {
 
   const copyAll = async () => {
     if (!logs.length) return
-    const text = logs.map((l) => `[${formatTime(l.time)}] ${String(l.text ?? '')}`).join('\n')
+    const text = logs.map((l) => `[${formatTime(l.time, lang)}] ${String(l.text ?? '')}`).join('\n')
     let ok = false
     try {
       await navigator.clipboard.writeText(text)
@@ -49,13 +49,13 @@ export default function ConsoleLog({ logs, embedded = false }) {
     <div className={embedded ? '' : 'shrink-0 border-t border-slate-800 bg-[#0a0e17]'}>
       <div className={`flex items-center gap-2 ${embedded ? 'px-0.5 pb-1' : 'px-3 pt-1.5 pb-1'}`}>
         <Terminal className="w-3.5 h-3.5 text-amber-400" />
-        <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400">Console Log</span>
-        <span className="text-[10px] text-slate-600">FFmpeg stderr + thông báo hệ thống</span>
+        <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400">{t('log.title')}</span>
+        <span className="text-[10px] text-slate-600">{t('log.sub')}</span>
         <button
           type="button"
           onClick={copyAll}
           disabled={!logs.length}
-          title="Copy toàn bộ log vào clipboard"
+          title={t('log.copyTip')}
           className={clsx(
             'ml-auto shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-semibold transition-colors',
             copied
@@ -65,7 +65,7 @@ export default function ConsoleLog({ logs, embedded = false }) {
           )}
         >
           {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-          {copied ? 'Đã copy!' : 'Copy log'}
+          {copied ? t('log.copied') : t('log.copy')}
         </button>
       </div>
       <div
@@ -77,11 +77,11 @@ export default function ConsoleLog({ logs, embedded = false }) {
         }
       >
         {logs.length === 0 ? (
-          <p className="text-slate-600 italic">— Chưa có log. Các thông báo sẽ xuất hiện tại đây —</p>
+          <p className="text-slate-600 italic">{t('log.empty')}</p>
         ) : (
           logs.map((l) => (
             <p key={l.id ?? l.time} className={clsx('whitespace-pre-wrap break-all', LEVEL_STYLE[l.level] || LEVEL_STYLE.info)}>
-              <span className="text-slate-600 select-none">[{formatTime(l.time)}] </span>
+              <span className="text-slate-600 select-none">[{formatTime(l.time, lang)}] </span>
               {String(l.text ?? '')}
             </p>
           ))

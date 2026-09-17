@@ -27,7 +27,7 @@ function run(bin, args) {
 }
 
 async function main() {
-  console.log('══════════ E2E TEST — KULL VIETSUB RENDERER ══════════\n')
+  console.log('══════════ E2E TEST — KULL AEGISUB RENDERER ══════════\n')
 
   // ── 1. Tạo media mẫu ──
   console.log('[1] Tạo video mẫu...')

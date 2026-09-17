@@ -19,7 +19,7 @@ function createWindow() {
     height: 860,
     minWidth: 1100,
     minHeight: 800,
-    title: 'Kull Vietsub Renderer',
+    title: 'Kull Aegisub Renderer',
     backgroundColor: '#0b0f19',
     autoHideMenuBar: true,
     webPreferences: {
@@ -44,20 +44,21 @@ function createWindow() {
 }
 
 // ─── IPC: Probe & hiển thị thông tin ─────────────────────────
-ipcMain.handle('probe-media', (_e, filePath) => engine.probeMedia(filePath))
+ipcMain.handle('probe-media', (_e, filePath, lang) => engine.probeMedia(filePath, lang))
 
 ipcMain.handle('select-file', async (_e, opts) => {
+  const lang = opts?.lang === 'en' ? 'en' : 'vi'
   const res = await dialog.showOpenDialog(mainWindow, {
-    title: opts?.title || 'Chọn file',
-    filters: opts?.filters || [{ name: 'Tất cả file', extensions: ['*'] }],
+    title: opts?.title || (lang === 'en' ? 'Select file' : 'Chọn file'),
+    filters: opts?.filters || [{ name: lang === 'en' ? 'All files' : 'Tất cả file', extensions: ['*'] }],
     properties: ['openFile'],
   })
   return res.canceled ? null : res.filePaths[0]
 })
 
-ipcMain.handle('select-dir', async () => {
+ipcMain.handle('select-dir', async (_e, lang) => {
   const res = await dialog.showOpenDialog(mainWindow, {
-    title: 'Chọn thư mục lưu file xuất',
+    title: lang === 'en' ? 'Choose output folder' : 'Chọn thư mục lưu file xuất',
     properties: ['openDirectory', 'createDirectory'],
   })
   return res.canceled ? null : res.filePaths[0]

@@ -2,7 +2,7 @@
 
 /**
  * ══════════════════════════════════════════════════════════════════
- *  ffmpegEngine.js — CORE ENGINE của Kull Vietsub Renderer
+ *  ffmpegEngine.js — CORE ENGINE của Kull Aegisub Renderer
  *
  *  GIAI ĐOẠN 2: Đọc thông số gốc (ffprobe), thuật toán Bitrate VBR,
  *              xử lý Subtitle Plugin (VSFilter/dll + libass), escape path.
@@ -16,13 +16,15 @@ const fs = require('fs')
 const os = require('os')
 const path = require('path')
 const { ffmpegPath, ffprobePath, resolveBin } = require('./paths')
+const { makeT } = require('./i18n')
 
 // ─────────────────────────────────────────────────────────────
 // 1. PROBE — Đọc thông số file media bằng ffprobe
 //    Trả về: width, height, fps, duration, bitrate_avg (kbps),
 //            codec gốc, thông tin audio, kích thước file.
 // ─────────────────────────────────────────────────────────────
-function probeMedia(filePath) {
+function probeMedia(filePath, lang) {
+  const t = makeT(lang)
   return new Promise((resolve, reject) => {
     const child = spawn(ffprobePath, [
       '-v', 'error',
@@ -35,9 +37,9 @@ function probeMedia(filePath) {
     let err = ''
     child.stdout.on('data', (d) => (out += d.toString('utf8')))
     child.stderr.on('data', (d) => (err += d.toString('utf8')))
-    child.on('error', (e) => reject(new Error(`Không chạy được ffprobe: ${e.message}`)))
+    child.on('error', (e) => reject(new Error(t('eng.errProbeRun', { msg: e.message }))))
     child.on('close', (code) => {
-      if (code !== 0) return reject(new Error(`ffprobe lỗi (exit ${code}): ${err.trim() || filePath}`))
+      if (code !== 0) return reject(new Error(t('eng.errProbeCode', { code, detail: err.trim() || filePath })))
       try {
         const info = JSON.parse(out)
         const video = (info.streams || []).find((s) => s.codec_type === 'video')
@@ -62,7 +64,7 @@ function probeMedia(filePath) {
           sizeBytes: parseInt(fmt.size || '0', 10) || 0,
         })
       } catch (e) {
-        reject(new Error(`Không phân tích được output ffprobe: ${e.message}`))
+        reject(new Error(t('eng.errProbeParse', { msg: e.message })))
       }
     })
   })
@@ -190,7 +192,8 @@ const ENCODER_MAP = {
   hevc: { nvenc: 'hevc_nvenc', qsv: 'hevc_qsv', amf: 'hevc_amf', cpu: 'libx265' },
 }
 
-function pickEncoder(hardware, codecFamily, available) {
+function pickEncoder(hardware, codecFamily, available, t) {
+  const tr = typeof t === 'function' ? t : makeT('vi')
   if (hardware === 'auto') {
     for (const h of ['nvenc', 'qsv', 'amf', 'cpu']) {
       if (available.includes(h)) {
@@ -202,7 +205,7 @@ function pickEncoder(hardware, codecFamily, available) {
   }
   const enc = ENCODER_MAP[codecFamily][hardware]
   if (enc && hardware !== 'cpu' && !available.includes(hardware)) {
-    return { encoder: ENCODER_MAP[codecFamily].cpu, hardware: 'cpu', label: 'CPU (fallback: thiếu GPU encoder)', fallback: true }
+    return { encoder: ENCODER_MAP[codecFamily].cpu, hardware: 'cpu', label: tr('eng.cpuFallback'), fallback: true }
   }
   return { encoder: enc || ENCODER_MAP[codecFamily].cpu, hardware, label: hardware.toUpperCase() }
 }
@@ -290,7 +293,8 @@ function preflightAvs(avsPath) {
  *    + Thiếu AviSynth core (bundled/system) hoặc FFmpeg thiếu avisynth
  *      => fallback libass + log rõ ràng.
  */
-async function buildSubtitlePlan(engine, subtitlePath, mainVideo, meta) {
+async function buildSubtitlePlan(engine, subtitlePath, mainVideo, meta, lang) {
+  const t = makeT(lang)
   if (engine !== 'libass') {
     const avsCoreOk = isAviSynthInstalled() && (await hasAviSynthFfmpeg())
     if (avsCoreOk) {
@@ -307,7 +311,7 @@ async function buildSubtitlePlan(engine, subtitlePath, mainVideo, meta) {
             dll,
             dllName,
             avsPath,
-            note: dllName === preferred ? null : `${preferred} không cung cấp TextSub cho AviSynth (bản DirectShow-only) → dùng ${dllName} thay thế (tương đương hiệu ứng Aegisub).`,
+            note: dllName === preferred ? null : t('eng.swapNote', { preferred, dll: dllName }),
             warning: null,
           }
         }
@@ -316,13 +320,13 @@ async function buildSubtitlePlan(engine, subtitlePath, mainVideo, meta) {
       return {
         type: 'libass',
         filter: `subtitles='${escapeFilterPath(subtitlePath)}'`,
-        warning: 'Không có plugin VSFilter nào mở (không chứa hàm TextSub cho AviSynth) hoặc không decode được video. Đã tự chuyển sang libass.',
+        warning: t('eng.warnNoPlugin'),
       }
     }
     return {
       type: 'libass',
       filter: `subtitles='${escapeFilterPath(subtitlePath)}'`,
-      warning: 'Thiếu AviSynth core (bin/AviSynth.dll hoặc AviSynth+ hệ thống) hoặc FFmpeg thiếu demuxer avisynth. Đã tự chuyển sang libass.',
+      warning: t('eng.warnNoAviSynth'),
     }
   }
   return {
@@ -354,23 +358,24 @@ function parseResolution(str) {
 }
 
 async function buildRenderCommand(options) {
+  const t = makeT(options.lang)
   // 9a. Probe các file liên quan
-  const mainMeta = await probeMedia(options.mainVideo)
+  const mainMeta = await probeMedia(options.mainVideo, options.lang)
   const metaMap = { main: mainMeta }
   let durationTotal = mainMeta.duration
   const hasIntro = !!(options.mergeEnabled && options.intro)
   const hasOutro = !!(options.mergeEnabled && options.outro)
   if (hasIntro) {
-    metaMap.intro = await probeMedia(options.intro)
+    metaMap.intro = await probeMedia(options.intro, options.lang)
     durationTotal += metaMap.intro.duration
   }
   if (hasOutro) {
-    metaMap.outro = await probeMedia(options.outro)
+    metaMap.outro = await probeMedia(options.outro, options.lang)
     durationTotal += metaMap.outro.duration
   }
 
   // 9b. Subtitle plan (libass hoặc avs)
-  const subPlan = await buildSubtitlePlan(options.subtitleEngine, options.subtitle, options.mainVideo, mainMeta)
+  const subPlan = await buildSubtitlePlan(options.subtitleEngine, options.subtitle, options.mainVideo, mainMeta, options.lang)
 
   // 9c. Chuẩn xuất W/H/FPS — lấy từ video chính hoặc người dùng custom
   let W = mainMeta.width
@@ -393,7 +398,7 @@ async function buildRenderCommand(options) {
     String(mainMeta.videoCodec).toLowerCase().includes('hevc')
       ? 'hevc'
       : 'h264'
-  const enc = pickEncoder(options.hardware, codecFamily, available)
+  const enc = pickEncoder(options.hardware, codecFamily, available, t)
 
   // 9e. Xây args
   const args = ['-hide_banner', '-y']
@@ -493,6 +498,7 @@ function formatDuration(secs) {
 }
 
 async function startRender(options, events) {
+  const t = makeT(options.lang)
   // Chuỗi thử: render đúng theo lựa chọn của người dùng; nếu AviSynth/VSFilter bị lỗi
   // runtime thì tự động render lại bằng libass (đảm bảo luôn có output cho người dùng).
   const attempts = [{ ...options }]
@@ -505,35 +511,49 @@ async function startRender(options, events) {
     if (outcome.kind === 'done' || outcome.kind === 'canceled') return
     lastError = outcome
     if (i < attempts.length - 1) {
-      ;(events.onLog || (() => {}))('— AviSynth/VSFilter gặp lỗi khi render, tự động thử lại bằng libass —', 'warn')
+      ;(events.onLog || (() => {}))(t('eng.retryLibass'), 'warn')
     }
   }
-  ;(events.onError || (() => {}))(lastError || { message: 'Không thể render.' })
+  ;(events.onError || (() => {}))(lastError || { message: t('eng.errGeneric') })
 }
 
 /** Thực thi MỘT lần render (một bộ options) → kết cục: done | canceled | {code,message,detail} */
 async function runRenderAttempt(options, events) {
+  const t = makeT(options.lang)
   const onLog = events.onLog || (() => {})
   const onProgress = events.onProgress || (() => {})
   const onDone = events.onDone || (() => {})
   cancelRequested = false
 
-  onLog('━━━ BẮT ĐẦU RENDER ━━━')
+  onLog(t('eng.start'))
   let cmd = null
   try {
-    onLog('Đang phân tích file bằng ffprobe...')
+    onLog(t('eng.probing'))
     cmd = await buildRenderCommand(options)
-    onLog(`Thông số chuẩn: ${cmd.mainMeta.width}x${cmd.mainMeta.height} @ ${cmd.mainMeta.fps}fps, bitrate gốc ~${cmd.mainMeta.bitrateAvg}kbps`)
+    onLog(t('eng.mainMeta', { w: cmd.mainMeta.width, h: cmd.mainMeta.height, fps: cmd.mainMeta.fps, br: cmd.mainMeta.bitrateAvg }))
     if (cmd.subPlan.warning) onLog(cmd.subPlan.warning, 'warn')
     if (cmd.subPlan.note) onLog(cmd.subPlan.note, 'info')
-    if (cmd.subPlan.type === 'avs') onLog(`Engine phụ đề: ${cmd.subPlan.dllName} qua AviSynth+ (TextSub)`, 'success')
-    else onLog('Engine phụ đề: libass (FFmpeg native subtitles filter)')
-    onLog(`Encoder: ${cmd.enc.encoder} #[${cmd.enc.label}]${cmd.enc.fallback ? ' (fallback do thiếu GPU)' : ''}`)
-    onLog(`Bitrate: ${cmd.qa.bitrate}k | Maxrate: ${cmd.qa.maxrate}k | Bufsize: ${cmd.qa.bufsize}k (Constrained VBR)`)
+    if (cmd.subPlan.type === 'avs') onLog(t('eng.avsOk', { dll: cmd.subPlan.dllName }), 'success')
+    else onLog(t('eng.libassOk'))
+    onLog(
+      t('eng.encoder', {
+        name: cmd.enc.encoder,
+        label: cmd.enc.label,
+        fallback: cmd.enc.fallback ? t('eng.fallbackTag') : '',
+      })
+    )
+    onLog(t('eng.bitrate', { b: cmd.qa.bitrate, m: cmd.qa.maxrate, u: cmd.qa.bufsize }))
     if (cmd.hasIntro || cmd.hasOutro) {
-      onLog(`Ghép Intro/Outro: ${(cmd.hasIntro ? 1 : 0) + 1 + (cmd.hasOutro ? 1 : 0)} phân đoạn, scale/pad về ${cmd.mainMeta.width}x${cmd.mainMeta.height}@${cmd.mainMeta.fps}fps`)
+      onLog(
+        t('eng.merge', {
+          n: (cmd.hasIntro ? 1 : 0) + 1 + (cmd.hasOutro ? 1 : 0),
+          w: cmd.mainMeta.width,
+          h: cmd.mainMeta.height,
+          fps: cmd.mainMeta.fps,
+        })
+      )
     }
-    onLog(`Output: ${options.outputPath}`)
+    onLog(t('eng.output', { path: options.outputPath }))
   } catch (e) {
     return { kind: 'error', message: e.message, detail: e.stack || '' }
   }
@@ -553,7 +573,7 @@ async function runRenderAttempt(options, events) {
       currentChild = spawn(ffmpegPath, cmd.args, { windowsHide: true })
     } catch (err) {
       removeAvs()
-      return resolveOutcome({ kind: 'error', message: `Không khởi động được FFmpeg: ${err.message}`, detail: '' })
+      return resolveOutcome({ kind: 'error', message: t('eng.errStart', { msg: err.message }), detail: '' })
     }
 
     currentChild.stderr.on('data', (chunk) => {
@@ -577,25 +597,25 @@ async function runRenderAttempt(options, events) {
     currentChild.on('error', (err) => {
       removeAvs()
       currentChild = null
-      resolveOutcome({ kind: 'error', message: `Không chạy được FFmpeg: ${err.message}`, detail: lastLines.slice(-10).join('\n') })
+      resolveOutcome({ kind: 'error', message: t('eng.errRun', { msg: err.message }), detail: lastLines.slice(-10).join('\n') })
     })
 
     currentChild.on('close', (code) => {
       removeAvs()
       currentChild = null
       if (cancelRequested) {
-        onLog('Đã hủy bởi người dùng.', 'warn')
+        onLog(t('eng.canceled'), 'warn')
         onDone({ outputPath: options.outputPath, canceled: true })
         resolveOutcome({ kind: 'canceled' })
       } else if (code === 0) {
-        onLog(`✅ Render hoàn tất! Tổng thời lượng ${formatDuration(total)}`, 'success')
+        onLog(t('eng.done', { dur: formatDuration(total) }), 'success')
         onDone({ outputPath: options.outputPath, duration: total })
         resolveOutcome({ kind: 'done' })
       } else {
         resolveOutcome({
           kind: 'error',
           code,
-          message: `FFmpeg thoát với mã lỗi ${code}. Kiểm tra log bên dưới để khắc phục.`,
+          message: t('eng.errExit', { code }),
           detail: lastLines.slice(-20).join('\n'),
         })
       }

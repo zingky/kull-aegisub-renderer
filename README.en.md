@@ -1,0 +1,100 @@
+# 🎬 Kull Aegisub Renderer
+
+[Tiếng Việt](./README.md) · **English**
+
+Desktop app that **burns (hardsubs) ASS/SRT subtitles into video** — **Electron + React + TailwindCSS**, render core powered by **FFmpeg + VSFilter (AviSynth+)**.
+
+> The project originally targeted Tauri, but the build machine has **no Rust/Cargo** → it uses **Electron + React** (the allowed fallback for this brief).
+
+---
+
+## 📥 Prebuilt download (no installation)
+
+**[KullAegisubRenderer-1.0.0-portable.exe (~161 MB)](https://github.com/zingky/kull-aegisub-renderer/releases/download/v1.0.0/KullAegisubRenderer-1.0.0-portable.exe)** — all builds on [Releases](https://github.com/zingky/kull-aegisub-renderer/releases).
+
+- **A single exe file** — just run it. It self-extracts to `%TEMP%`: no install, no registry changes.
+- Bundled toolkit: `ffmpeg`, `ffprobe`, `AviSynth.dll`, `VSFilterMod.dll`, `VSFilter.dll`, `DirectShowSource.dll`.
+- Requires **Windows 10/11 64-bit**. On first run SmartScreen may warn (unsigned) → **More info → Run anyway**.
+
+---
+
+## ✨ Features
+
+| Group | Details |
+|---|---|
+| **4 drop zones** | Main video ⚠️ · Subtitle `.ass/.srt` ⚠️ · Intro · Outro — shows file name, resolution, FPS, duration, size; Intro/Outro are dimmed until merging is enabled |
+| **Subtitle engine** | `VSFilterMod.dll` (default) / `VSFilter.dll` / `libass` — **AviSynth+ is bundled**, no system install needed; a DLL lacking `TextSub` is auto-swapped to the other one, runtime failures auto-fallback to libass |
+| **Hardware encoder** | Auto (prefer GPU) / NVIDIA NVENC / Intel QSV / AMD AMF / CPU x264-x265 — encoders are detected, unavailable ones are dimmed |
+| **Quality** | Keep original (Constrained VBR from source) / High / Balanced / Small size / Custom (Resolution · FPS · Bitrate) |
+| **Output format** | `MP4` (default) · `MKV` · `MOV` · `WebM` · `AVI` |
+| **Intro/Outro merge** | Auto scale + pad to the main video standard, 3-segment concat, silent segments get generated audio |
+| **Progress & Log** | Progress % · FPS · speed `×` · **text ETA ("1 h 23 min 45 s")** · stats logged every 5% (frame/fps/bitrate/size) · **Copy whole log** |
+| **Language** | **VI / EN switch on the header** — switches the whole UI *and* engine logs instantly, remembers your choice |
+| **UI** | Compact single 1300×860 window, no page scrolling, liquid-glass effects, Error Boundary to prevent blank screens |
+
+---
+
+## 🖱️ How to use
+
+1. **Section 1 · Source Files**: drop the **main video** + **subtitle file**. To merge clips, tick **☑ Merge Intro/Outro** then drop the Intro/Outro files.
+2. **Section 2 · Engine & Hardware**: keep the defaults (`VSFilterMod.dll` + `Auto`) if unsure.
+3. **Section 3 · Render Quality**: *"Keep original"* produces a file nearly identical to the source — only with the subtitles burned in.
+4. **Section 4 · Output & Controls**: pick the output folder, file name (default `<source_name>_exported`), **format** → press **START RENDER**. Watch progress/ETA/logs; when done, press **Open output folder**. To stop, press **CANCEL** (kills the whole FFmpeg process tree).
+
+---
+
+## 📦 Build your own portable EXE
+
+```bash
+npm install
+npm run check:bin    # verify bin/ (prints download instructions if missing)
+npm run dist         # → release/KullAegisubRenderer-<version>-portable.exe  (~161 MB)
+```
+
+> Close any running app instance before building (locked files in `release/win-unpacked` break the build).
+> Dev mode: `npm run dev` · built app: `npm start`.
+
+---
+
+## 🧪 Tests
+
+```bash
+npm run test:e2e      # creates a sample video + real render (libass + outro merge) with bin/ffmpeg.exe
+npm run test:repro    # regression: selecting a file must not crash the UI (jsdom + real bundle)
+npm run test:i18n     # bilingual: dictionary parity + VI/EN switch changes UI + localStorage persistence
+node scripts/checkRows.js       # section 2 layout structure (buttons grouped per row)
+node scripts/checkQuality.js    # section 3 structure + console log + glass buttons
+node scripts/test-vsfilter.js   # real render through AviSynth+ (auto-swap VSFilterMod → VSFilter)
+node scripts/test-avs-dlls.js   # checks TextSub support of each DLL in bin/
+```
+
+---
+
+## 🧰 Required toolkit in `bin/`
+
+| File | Source |
+|---|---|
+| `ffmpeg.exe`, `ffprobe.exe` | https://www.gyan.dev/ffmpeg/builds/ (build with `--enable-avisynth` + GPU encoders) |
+| `AviSynth.dll` | https://github.com/AviSynth/AviSynthPlus/releases → `-filesonly.7z` package (`x64` folder) |
+| `avsplugins/DirectShowSource.dll` | included in the `-filesonly.7z` package above (`x64/plugins` folder) |
+| `VSFilterMod.dll` | https://github.com/pinterf/VSFilterMod/releases |
+| `VSFilter.dll` | https://github.com/cyberbeing/xy-VSFilter/releases (TextSub build for AviSynth) |
+
+Quick check: `npm run check:bin`
+
+---
+
+## 🗂️ Project structure
+
+```
+electron/   main.js (IPC) · preload.js · ffmpegEngine.js (core engine) · i18n.js · paths.js
+src/        App.jsx · i18n.js (VI/EN dictionaries) · components/ (8 UI + LangSwitch + ErrorBoundary) · utils/
+scripts/    checkBin · e2eTest · repro-select · checkI18n · checkRows · checkQuality · test-vsfilter · test-avs-dlls
+bin/        ffmpeg · ffprobe · AviSynth.dll · VSFilter*.dll · avsplugins/
+```
+
+---
+
+## 📄 License
+
+MIT — see `package.json`.
