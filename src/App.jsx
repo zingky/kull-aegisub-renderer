@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import { CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
+import appIcon from './assets/icon.ico'
 import DropZone from './components/DropZone'
 import EngineSelect from './components/EngineSelect'
 import HardwareSelect from './components/HardwareSelect'
@@ -206,7 +207,7 @@ export default function App() {
       {/* ── Header gọn 1 dòng ── */}
       <header className="shrink-0 z-20 bg-[#0f1526]/95 backdrop-blur border-b border-slate-800 px-4 py-2 flex items-center gap-3">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <img src="/icon.ico" alt="logo" className="shrink-0 w-7 h-7" />
+          <img src={appIcon} alt="logo" className="shrink-0 w-7 h-7" />
           <h1 className="text-[13px] font-extrabold tracking-tight text-white leading-none truncate">
             {t('app.name')}
             <span className="ml-2 font-normal text-slate-500">

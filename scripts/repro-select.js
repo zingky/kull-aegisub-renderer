@@ -71,8 +71,9 @@ w.addEventListener('error', (e) => console.log('  ⚠ WINDOW ERROR:', e.message,
 w.addEventListener('unhandledrejection', (e) => console.log('  ⚠ UNHANDLED REJECTION:', String(e.reason && e.reason.stack || e.reason)))
 
 async function main() {
-  // Nạp bundle app
-  w.eval(bundleSrc)
+  // Nạp bundle app (shim import.meta.url cho jsdom — bundle vite dùng URL tương đối của asset)
+  w.eval('var import_meta = { url: "file:///C:/app/index.html" };')
+  w.eval(bundleSrc.replace(/import\.meta\.url/g, 'import_meta.url'))
   await new Promise((r) => setTimeout(r, 800)) // chờ React mount + effects
 
   const root = w.document.querySelector('#root')

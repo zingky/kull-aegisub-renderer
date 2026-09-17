@@ -46,6 +46,7 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
+      "electron/icon.ico",
       "package.json"
     ],
     "extraResources": [

@@ -75,8 +75,15 @@ export default function DropZone({ slot, file, meta, onFile, onClear, required =
             : 'border-slate-700 bg-slate-800/30 hover:border-slate-500'
       )}
     >
+      {/* Badge BẮT BUỘC — sát lề phải, nằm trọn trong ô */}
+      {required && !file && (
+        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/40 leading-none">
+          {t('dz.required')}
+        </span>
+      )}
+
       {!file ? (
-        <div className="flex items-center gap-2.5">
+        <div className={clsx('flex items-center gap-2.5', required && 'pr-16')}>
           <div
             className={clsx(
               'shrink-0 w-8 h-8 rounded-md flex items-center justify-center',
