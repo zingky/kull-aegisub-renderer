@@ -4,7 +4,6 @@
 
 App desktop **ghép cứng phụ đề ASS/SRT vào video (Hardsub)** — **Electron + React + TailwindCSS**, lõi render **FFmpeg + VSFilter (AviSynth+)**.
 
-> Ban đầu dự án nhắm Tauri, nhưng máy build **chưa có Rust/Cargo** → dùng **Electron + React** (phương án thay thế của đề bài).
 
 ---
 

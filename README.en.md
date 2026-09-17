@@ -4,7 +4,6 @@
 
 Desktop app that **burns (hardsubs) ASS/SRT subtitles into video** — **Electron + React + TailwindCSS**, render core powered by **FFmpeg + VSFilter (AviSynth+)**.
 
-> The project originally targeted Tauri, but the build machine has **no Rust/Cargo** → it uses **Electron + React** (the allowed fallback for this brief).
 
 ---
 
