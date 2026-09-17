@@ -20,6 +20,7 @@ function createWindow() {
     minWidth: 1100,
     minHeight: 800,
     title: 'Kull Aegisub Renderer',
+    icon: path.join(__dirname, '..', 'build', 'icon.ico'),
     backgroundColor: '#0b0f19',
     autoHideMenuBar: true,
     webPreferences: {

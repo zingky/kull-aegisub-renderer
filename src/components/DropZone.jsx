@@ -75,13 +75,6 @@ export default function DropZone({ slot, file, meta, onFile, onClear, required =
             : 'border-slate-700 bg-slate-800/30 hover:border-slate-500'
       )}
     >
-      {/* Badge yêu cầu */}
-      {required && (
-        <span className="absolute -top-2 right-2 text-[9px] font-bold px-1.5 py-px rounded bg-red-500/20 text-red-300 border border-red-500/40">
-          {t('dz.required')}
-        </span>
-      )}
-
       {!file ? (
         <div className="flex items-center gap-2.5">
           <div
@@ -93,8 +86,14 @@ export default function DropZone({ slot, file, meta, onFile, onClear, required =
             {drag ? <UploadCloud className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-semibold text-slate-200 leading-tight">
-              {label} <span className="font-normal text-slate-500">· {EXT_HINTS[slot]}</span>
+            <p className="text-[13px] font-semibold text-slate-200 leading-tight flex items-center gap-1.5 flex-wrap">
+              <span>{label}</span>
+              {required && (
+                <span className="text-[9px] font-bold px-1.5 py-px rounded bg-red-500/20 text-red-300 border border-red-500/40 leading-none py-0.5">
+                  {t('dz.required')}
+                </span>
+              )}
+              <span className="font-normal text-slate-500">· {EXT_HINTS[slot]}</span>
             </p>
             {meta && (
               <p className="text-[11px] text-slate-400 truncate">
