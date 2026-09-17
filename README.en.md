@@ -8,6 +8,12 @@ Desktop app that **burns (hardsubs) ASS/SRT subtitles into video** — **Electro
 
 ---
 
+## 🖼️ Screenshot
+
+<img width="2556" height="1512" alt="Kull Aegisub Renderer — main UI" src="https://github.com/user-attachments/assets/b6461381-cecc-4ef3-af4a-22b3be0c4f76" />
+
+---
+
 ## 📥 Prebuilt download (no installation)
 
 **[KullAegisubRenderer-1.0.0-portable.exe (~161 MB)](https://github.com/zingky/kull-aegisub-renderer/releases/download/v1.0.0/KullAegisubRenderer-1.0.0-portable.exe)** — all builds on [Releases](https://github.com/zingky/kull-aegisub-renderer/releases).

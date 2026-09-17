@@ -8,6 +8,12 @@ App desktop **ghép cứng phụ đề ASS/SRT vào video (Hardsub)** — **Elec
 
 ---
 
+## 🖼️ Giao diện
+
+<img width="2556" height="1512" alt="Kull Aegisub Renderer - UI" src="https://github.com/user-attachments/assets/b6461381-cecc-4ef3-af4a-22b3be0c4f76" />
+
+---
+
 ## 📥 Tải bản dựng sẵn (không cần cài đặt)
 
 **[KullAegisubRenderer-1.0.0-portable.exe (~161 MB)](https://github.com/zingky/kull-aegisub-renderer/releases/download/v1.0.0/KullAegisubRenderer-1.0.0-portable.exe)** — mọi bản phát hành ở [Releases](https://github.com/zingky/kull-aegisub-renderer/releases).
