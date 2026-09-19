@@ -15,11 +15,28 @@ App desktop **ghép cứng phụ đề ASS/SRT vào video (Hardsub)** — **Elec
 
 ## 📥 Tải bản dựng sẵn (không cần cài đặt)
 
-**[KullAegisubRenderer-1.0.0-portable.exe (~161 MB)](https://github.com/zingky/kull-aegisub-renderer/releases/download/v1.0.0/KullAegisubRenderer-1.0.0-portable.exe)** — mọi bản phát hành ở [Releases](https://github.com/zingky/kull-aegisub-renderer/releases).
+Mọi bản phát hành ở [Releases](https://github.com/zingky/kull-aegisub-renderer/releases/tag/v1.0.0). Có 2 lựa chọn:
 
-- **1 file exe duy nhất**, chạy là dùng, tự giải nén vào `%TEMP%` — không cài đặt, không đụng registry.
-- Kèm sẵn toolkit: `ffmpeg`, `ffprobe`, `AviSynth.dll`, `VSFilterMod.dll`, `VSFilter.dll`, `DirectShowSource.dll`.
-- Yêu cầu **Windows 10/11 64-bit**. Lần đầu SmartScreen cảnh báo (chưa ký số) → **More info → Run anyway**.
+| Bản | Dung lượng | Mở app | Ghi chú |
+|---|---|---|---|
+| **[ZIP - win-x64](https://github.com/zingky/kull-aegisub-renderer/releases/download/v1.0.0/KullAegisubRenderer-1.0.0-win-x64.zip)** ⭐ | ~191 MB | **~0.4 giây** | Nhanh nhất — giải nén 1 lần rồi chạy |
+| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v1.0.0/KullAegisubRenderer-1.0.0-portable.exe)** | ~129 MB | 6-12 giây | 1 file duy nhất, tiện mang theo |
+
+### Cách dùng bản ZIP (khuyến nghị)
+
+1. Tải `KullAegisubRenderer-1.0.0-win-x64.zip` → chuột phải → **Extract All…** ra thư mục bất kỳ (VD `D:\KullAegisubRenderer`).
+2. Vào thư mục vừa giải nén → chạy **`Kull Aegisub Renderer.exe`**.
+3. Lần đầu SmartScreen có thể cảnh báo (app chưa ký số) → **More info → Run anyway**. Từ lần sau mở chỉ ~0.4 giây.
+
+> ⚠️ **Đừng chạy exe trực tiếp bên trong file ZIP.** Windows sẽ tự bung tạm ra `%TEMP%` mỗi lần mở (chậm y như bản portable) và có thể lỗi thiếu file. Phải giải nén ra thư mục trước.
+>
+> ⚠️ Giữ nguyên toàn bộ file trong thư mục đã giải nén (các `.dll`, `locales/`, `resources/`) — thiếu 1 file là app không chạy.
+
+### Cách dùng bản Portable
+
+Double-click file exe là xong — không cài đặt, không đụng registry, xóa file là gỡ sạch. Đổi lại mỗi lần mở app phải chờ 6-12 giây để nó tự bung 510 MB ra `%TEMP%`.
+
+- Yêu cầu **Windows 10/11 64-bit**. Kèm sẵn toolkit: `ffmpeg`, `ffprobe`, `AviSynth.dll`, `VSFilterMod.dll`, `VSFilter.dll`, `DirectShowSource.dll`.
 
 ---
 
@@ -53,7 +70,8 @@ App desktop **ghép cứng phụ đề ASS/SRT vào video (Hardsub)** — **Elec
 ```bash
 npm install
 npm run check:bin    # kiểm tra bin/ (hướng dẫn tải nếu thiếu)
-npm run dist         # → release/KullAegisubRenderer-<version>-portable.exe  (~161 MB)
+npm run dist         # → release/KullAegisubRenderer-<version>-portable.exe  (~129 MB)
+                     #   release/KullAegisubRenderer-<version>-win-x64.zip   (~191 MB, mở app ~0.4s)
 ```
 
 > Đóng app đang chạy trước khi build (file trong `release/win-unpacked` bị khóa sẽ làm build lỗi).
@@ -71,6 +89,14 @@ node scripts/checkRows.js       # cấu trúc layout mục 2 (nhóm nút theo h�
 node scripts/checkQuality.js    # cấu trúc mục 3 + console log + nút không còn hiệu ứng nặng
 node scripts/test-vsfilter.js   # render thật qua AviSynth+ (auto-swap VSFilterMod → VSFilter)
 node scripts/test-avs-dlls.js   # kiểm tra TextSub của từng DLL trong bin
+node scripts/checkIcon.ps1      # kiểm tra icon trong exe (đối chiếu hash pixel với build/icon.ico)
+```
+
+Kiểm tra bản ZIP đã giải nén (engine + `bin/` trong `resources/`) chạy đúng từ thư mục bất kỳ:
+
+```powershell
+$env:ELECTRON_RUN_AS_NODE='1'
+& "<thư_mục_đã_giải_nén>\Kull Aegisub Renderer.exe" scripts/zipRenderTest.js
 ```
 
 ---
@@ -94,7 +120,7 @@ Kiểm tra nhanh: `npm run check:bin`
 ```
 electron/   main.js (IPC) · preload.js · ffmpegEngine.js (Core Engine) · i18n.js · paths.js
 src/        App.jsx · i18n.js (từ điển VI/EN) · components/ (8 UI + LangSwitch + ErrorBoundary) · utils/
-scripts/    checkBin · e2eTest · repro-select · checkI18n · checkRows · checkQuality · test-vsfilter · test-avs-dlls
+scripts/    checkBin · e2eTest · repro-select · checkI18n · checkRows · checkQuality · test-vsfilter · test-avs-dlls · zipRenderTest · afterPackIcon
 bin/        ffmpeg · ffprobe · AviSynth.dll · VSFilter*.dll · avsplugins/
 ```
 

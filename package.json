@@ -63,9 +63,20 @@
     "win": {
       "icon": "build/icon.ico",
       "signAndEditExecutable": false,
+      "electronLanguages": [
+        "vi",
+        "en-US"
+      ],
+      "artifactName": "KullAegisubRenderer-${version}-win-${arch}.${ext}",
       "target": [
         {
           "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
           "arch": [
             "x64"
           ]
