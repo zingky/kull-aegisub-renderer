@@ -75,15 +75,8 @@ export default function DropZone({ slot, file, meta, onFile, onClear, required =
             : 'border-slate-700 bg-slate-800/30 hover:border-slate-500'
       )}
     >
-      {/* Badge BẮT BUỘC — sát lề phải, nằm trọn trong ô */}
-      {required && !file && (
-        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/40 leading-none">
-          {t('dz.required')}
-        </span>
-      )}
-
       {!file ? (
-        <div className={clsx('flex items-center gap-2.5', required && 'pr-16')}>
+        <div className="flex items-center gap-2.5">
           <div
             className={clsx(
               'shrink-0 w-8 h-8 rounded-md flex items-center justify-center',
@@ -93,14 +86,15 @@ export default function DropZone({ slot, file, meta, onFile, onClear, required =
             {drag ? <UploadCloud className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-semibold text-slate-200 leading-tight flex items-center gap-1.5 flex-wrap">
-              <span>{label}</span>
+            <p className="text-[13px] font-semibold text-slate-200 leading-tight flex items-center gap-1.5">
+              <span className="truncate">{label}</span>
+              <span className="flex-1" />
               {required && (
-                <span className="text-[9px] font-bold px-1.5 py-px rounded bg-red-500/20 text-red-300 border border-red-500/40 leading-none py-0.5">
+                <span className="shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/40 leading-none">
                   {t('dz.required')}
                 </span>
               )}
-              <span className="font-normal text-slate-500">· {EXT_HINTS[slot]}</span>
+              <span className="shrink-0 font-normal text-slate-500">· {EXT_HINTS[slot]}</span>
             </p>
             {meta && (
               <p className="text-[11px] text-slate-400 truncate">
