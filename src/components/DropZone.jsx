@@ -75,6 +75,11 @@ export default function DropZone({ slot, file, meta, onFile, onClear, required =
             : 'border-slate-700 bg-slate-800/30 hover:border-slate-500'
       )}
     >
+      {required && !file && (
+        <span className="absolute right-2 top-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/40 leading-none pointer-events-none">
+          {t('dz.required')}
+        </span>
+      )}
       {!file ? (
         <div className="flex items-center gap-2.5">
           <div
@@ -86,15 +91,13 @@ export default function DropZone({ slot, file, meta, onFile, onClear, required =
             {drag ? <UploadCloud className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-semibold text-slate-200 leading-tight flex items-center gap-1.5">
-              <span className="truncate">{label}</span>
-              <span className="flex-1" />
-              {required && (
-                <span className="shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/40 leading-none">
-                  {t('dz.required')}
-                </span>
-              )}
-              <span className="shrink-0 font-normal text-slate-500">· {EXT_HINTS[slot]}</span>
+            {/* Dòng 1: tên ô + badge BẮT BUỘC neo cứng mép phải */}
+            <p className="text-[13px] font-semibold text-slate-200 leading-tight truncate pr-16">
+              {label}
+            </p>
+            {/* Dòng 2: ghi chú định dạng */}
+            <p className="text-[11px] text-slate-500 leading-tight truncate">
+              {EXT_HINTS[slot]}
             </p>
             {meta && (
               <p className="text-[11px] text-slate-400 truncate">
