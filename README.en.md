@@ -35,7 +35,7 @@ Desktop app that **burns (hardsubs) ASS/SRT subtitles into video** — **Electro
 | **Intro/Outro merge** | Auto scale + pad to the main video standard, 3-segment concat, silent segments get generated audio |
 | **Progress & Log** | Progress % · FPS · speed `×` · **text ETA ("1 h 23 min 45 s")** · stats logged every 5% (frame/fps/bitrate/size) · **Copy whole log** |
 | **Language** | **VI / EN switch on the header** — switches the whole UI *and* engine logs instantly, remembers your choice |
-| **UI** | Compact single 1300×860 window, no page scrolling, liquid-glass effects, Error Boundary to prevent blank screens |
+| **UI** | Compact single 1300×860 window, no page scrolling, lightweight & fast to open, Error Boundary to prevent blank screens |
 
 ---
 
@@ -68,7 +68,7 @@ npm run test:e2e      # creates a sample video + real render (libass + outro mer
 npm run test:repro    # regression: selecting a file must not crash the UI (jsdom + real bundle)
 npm run test:i18n     # bilingual: dictionary parity + VI/EN switch changes UI + localStorage persistence
 node scripts/checkRows.js       # section 2 layout structure (buttons grouped per row)
-node scripts/checkQuality.js    # section 3 structure + console log + glass buttons
+node scripts/checkQuality.js    # section 3 structure + console log + no heavy button effects
 node scripts/test-vsfilter.js   # real render through AviSynth+ (auto-swap VSFilterMod → VSFilter)
 node scripts/test-avs-dlls.js   # checks TextSub support of each DLL in bin/
 ```

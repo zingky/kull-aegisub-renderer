@@ -35,7 +35,7 @@ App desktop **ghép cứng phụ đề ASS/SRT vào video (Hardsub)** — **Elec
 | **Ghép Intro/Outro** | Tự động scale + pad theo chuẩn video chính, concat 3 đoạn, đoạn câm được chèn audio tĩnh |
 | **Tiến trình & Log** | Progress % · FPS · tốc độ `×` · **ETA dạng "X giờ X phút X giây"** · log thống kê mỗi 5% (frame/fps/bitrate/dung lượng) · **Copy toàn bộ log** |
 | **Ngôn ngữ** | **Nút VI / EN trên header** — đổi ngay toàn bộ giao diện *và* log của engine, ghi nhớ lựa chọn |
-| **UI** | Gọn trong 1 cửa sổ 1300×860, không scroll trang, hiệu ứng liquid-glass, Error Boundary chống màn trắng |
+| **UI** | Gọn trong 1 cửa sổ 1300×860, không scroll trang, nhẹ & mở nhanh, Error Boundary chống màn trắng |
 
 ---
 
@@ -68,7 +68,7 @@ npm run test:e2e      # tạo video mẫu + render thật (libass + ghép outro)
 npm run test:repro    # hồi quy: chọn file không được làm crash UI (jsdom + bundle thật)
 npm run test:i18n     # song ngữ: parity từ điển + nút VI/EN đổi UI + lưu localStorage
 node scripts/checkRows.js       # cấu trúc layout mục 2 (nhóm nút theo hàng)
-node scripts/checkQuality.js    # cấu trúc mục 3 + console log + glass buttons
+node scripts/checkQuality.js    # cấu trúc mục 3 + console log + nút không còn hiệu ứng nặng
 node scripts/test-vsfilter.js   # render thật qua AviSynth+ (auto-swap VSFilterMod → VSFilter)
 node scripts/test-avs-dlls.js   # kiểm tra TextSub của từng DLL trong bin
 ```
