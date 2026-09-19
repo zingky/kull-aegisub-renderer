@@ -77,6 +77,14 @@ npm run dist         # → release/KullAegisubRenderer-<version>-portable.exe  (
 > Đóng app đang chạy trước khi build (file trong `release/win-unpacked` bị khóa sẽ làm build lỗi).
 > Chạy dev: `npm run dev` · chạy bản build: `npm start`.
 
+### Cập nhật nội dung Release
+
+```bash
+node scripts/setReleaseNotes.js docs/release-notes-v1.0.0.md v1.0.0
+```
+
+> ⚠️ **Đừng dùng PowerShell để ghi release notes.** PowerShell 5 đọc file `.ps1` không BOM theo bảng mã ANSI (CP1252) nên tiếng Việt bị hỏng ngay trước khi gửi lên GitHub → release hiển thị dạng `ghĂ©p cá»©ng phá»¥ Ä‘á»‹`. Script Node ở trên đọc/ghi UTF-8 chuẩn, sau khi ghi còn **tự GET lại và so hash** để chắc chắn nội dung khớp file gốc.
+
 ---
 
 ## 🧪 Kiểm thử
@@ -120,7 +128,7 @@ Kiểm tra nhanh: `npm run check:bin`
 ```
 electron/   main.js (IPC) · preload.js · ffmpegEngine.js (Core Engine) · i18n.js · paths.js
 src/        App.jsx · i18n.js (từ điển VI/EN) · components/ (8 UI + LangSwitch + ErrorBoundary) · utils/
-scripts/    checkBin · e2eTest · repro-select · checkI18n · checkRows · checkQuality · test-vsfilter · test-avs-dlls · zipRenderTest · afterPackIcon
+scripts/    checkBin · e2eTest · repro-select · checkI18n · checkRows · checkQuality · test-vsfilter · test-avs-dlls · zipRenderTest · afterPackIcon · setReleaseNotes
 bin/        ffmpeg · ffprobe · AviSynth.dll · VSFilter*.dll · avsplugins/
 ```
 

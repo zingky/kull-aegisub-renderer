@@ -77,6 +77,14 @@ npm run dist         # → release/KullAegisubRenderer-<version>-portable.exe  (
 > Close any running app instance before building (locked files in `release/win-unpacked` break the build).
 > Dev mode: `npm run dev` · built app: `npm start`.
 
+### Updating the Release body
+
+```bash
+node scripts/setReleaseNotes.js docs/release-notes-v1.0.0.md v1.0.0
+```
+
+> ⚠️ **Never write release notes with PowerShell.** PowerShell 5 reads a BOM-less `.ps1` as ANSI (CP1252), so non-ASCII text is already corrupted before it reaches GitHub. The Node script above reads/writes proper UTF-8 and then **re-fetches the release and compares hashes** to prove the body matches the source file.
+
 ---
 
 ## 🧪 Tests
@@ -121,7 +129,7 @@ Quick check: `npm run check:bin`
 ```
 electron/   main.js (IPC) · preload.js · ffmpegEngine.js (core engine) · i18n.js · paths.js
 src/        App.jsx · i18n.js (VI/EN dictionaries) · components/ (8 UI + LangSwitch + ErrorBoundary) · utils/
-scripts/    checkBin · e2eTest · repro-select · checkI18n · checkRows · checkQuality · test-vsfilter · test-avs-dlls · zipRenderTest · afterPackIcon
+scripts/    checkBin · e2eTest · repro-select · checkI18n · checkRows · checkQuality · test-vsfilter · test-avs-dlls · zipRenderTest · afterPackIcon · setReleaseNotes
 bin/        ffmpeg · ffprobe · AviSynth.dll · VSFilter*.dll · avsplugins/
 ```
 
