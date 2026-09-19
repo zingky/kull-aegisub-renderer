@@ -77,7 +77,7 @@ function QualityOption({ c, active, onPick, t }) {
       onClick={onPick}
       title={t(c.descKey)}
       className={clsx(
-        'glass-btn cursor-pointer rounded-lg border px-2 py-1 text-center block',
+        'cursor-pointer rounded-lg border px-2 py-1 text-center block',
         active ? 'border-amber-400 bg-amber-400/10' : 'border-slate-700 bg-slate-800/40 hover:border-slate-500'
       )}
     >

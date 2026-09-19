@@ -7,7 +7,7 @@ export default function MergeToggle({ checked, onChange, t }) {
       onClick={() => onChange(!checked)}
       title={t('merge.tip')}
       className={clsx(
-        'glass-btn flex items-center gap-2 cursor-pointer rounded-lg border px-2.5 py-2 select-none',
+        'flex items-center gap-2 cursor-pointer rounded-lg border px-2.5 py-2 select-none',
         checked ? 'border-amber-400/70 bg-amber-400/10' : 'border-slate-700 bg-slate-800/40 hover:border-slate-500'
       )}
     >

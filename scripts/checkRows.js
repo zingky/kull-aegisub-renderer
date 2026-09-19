@@ -50,7 +50,9 @@ for (const k of ['window', 'document', 'navigator', 'Node', 'HTMLElement', 'getC
 global.window = w
 
 async function main() {
-  w.eval(bundleSrc)
+  // Shim import.meta.url cho jsdom (bundle vite dùng URL tương đối của asset)
+  w.eval('var import_meta = { url: "file:///C:/app/index.html" };')
+  w.eval(bundleSrc.replace(/import\.meta\.url/g, 'import_meta.url'))
   await new Promise((r) => setTimeout(r, 800))
 
   // Tìm label chứa text chính xác (tránh div tổ tiên cũng chứa text)

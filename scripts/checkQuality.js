@@ -1,7 +1,7 @@
 'use strict'
 /**
  * checkQuality.js — kiểm tra layout mục 3: hàng presets 3 nút,
- * hàng anchor 2 nút, thứ tự đúng, + class glass-btn trên các nút.
+ * hàng anchor 2 nút, thứ tự đúng, + xác nhận đã gỡ liquid glass.
  */
 const { JSDOM, VirtualConsole } = require('jsdom')
 const fs = require('fs')
@@ -46,7 +46,9 @@ for (const k of ['window', 'document', 'navigator', 'Node', 'HTMLElement', 'getC
 global.window = w
 
 async function main() {
-  w.eval(bundleSrc)
+  // Shim import.meta.url cho jsdom (bundle vite dùng URL tương đối của asset)
+  w.eval('var import_meta = { url: "file:///C:/app/index.html" };')
+  w.eval(bundleSrc.replace(/import\.meta\.url/g, 'import_meta.url'))
   await new Promise((r) => setTimeout(r, 800))
   const txt = (el) => el.textContent.replace(/\s+/g, ' ')
   const has = (el, t) => txt(el).includes(t)
@@ -71,15 +73,14 @@ async function main() {
   const inCol = w.document.querySelector('#sec4col .log-text')
   const footerLog = [...w.document.querySelectorAll('body > div > div.log-text, #root > div > div.log-text')]
   check(!!inCol, 'console log nằm trong cột phải dưới mục 4')
-  // glass-btn: radio mục 2/3 + dropzone + nút format/render đều có
+  // Không còn hiệu ứng liquid glass (đã gỡ để tối ưu tốc độ mở app)
   const glass = [...w.document.querySelectorAll('#root .glass-btn')]
-  check(glass.length >= 15, `glass-btn phủ đủ nút (thấy ${glass.length} phần tử, cần ≥15)`)
+  check(glass.length === 0, `không còn class glass-btn nào (thấy ${glass.length})`)
   const css = fs.readFileSync(path.join(__dirname, '..', 'dist', 'assets',
     fs.readdirSync(assetsDir).find((f) => f.endsWith('.css'))), 'utf8')
-  check(css.includes('.glass-btn'), 'CSS .glass-btn có trong bundle')
-  check(css.includes('prefers-reduced-motion'), 'có tôn trọng prefers-reduced-motion')
-  if (fail) { console.log(`\n❌ QUALITY/LOG/GLASS SAI (${fail})`); process.exit(1) }
-  console.log('\n✅ MỤC 3 + LOG + LIQUID GLASS ĐÚNG YÊU CẦU')
+  check(!css.includes('.glass-btn'), 'CSS .glass-btn đã gỡ khỏi bundle')
+  if (fail) { console.log(`\n❌ QUALITY/LOG SAI (${fail})`); process.exit(1) }
+  console.log('\n✅ MỤC 3 + LOG ĐÚNG YÊU CẦU (KHÔNG LIQUID GLASS)')
   process.exit(0)
 }
 main().catch((e) => { console.error(e); process.exit(1) })

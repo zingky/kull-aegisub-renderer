@@ -7,7 +7,7 @@ export default function LangSwitch({ lang, onChange, label }) {
   return (
     <div
       title={label}
-      className="glass-btn shrink-0 flex items-center rounded-full border border-slate-700 bg-slate-800/50 p-0.5"
+      className="shrink-0 flex items-center rounded-full border border-slate-700 bg-slate-800/50 p-0.5"
     >
       <Languages className="w-3 h-3 text-slate-400 ml-1.5 mr-1 shrink-0" />
       {LANGS.map((l) => (

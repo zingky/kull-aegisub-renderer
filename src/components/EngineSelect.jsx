@@ -32,7 +32,7 @@ function EngineOption({ e, active, onPick, t }) {
       onClick={onPick}
       title={t(e.descKey)}
       className={clsx(
-        'glass-btn cursor-pointer rounded-lg border px-2 py-1.5 block',
+        'cursor-pointer rounded-lg border px-2 py-1.5 block',
         active ? 'border-amber-400 bg-amber-400/10' : 'border-slate-700 bg-slate-800/40 hover:border-slate-500'
       )}
     >
