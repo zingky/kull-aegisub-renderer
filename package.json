@@ -44,6 +44,7 @@
     },
     "compression": "normal",
     "npmRebuild": false,
+    "afterPack": "scripts/afterPackIcon.js",
     "files": [
       "dist/**/*",
       "electron/**/*",
