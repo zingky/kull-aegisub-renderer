@@ -13,6 +13,8 @@ function peMachine(p) {
 }
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kull-avs2-'))
+// Tự dọn thư mục test khi process kết thúc (dù pass hay lỗi)
+process.on('exit', () => { try { fs.rmSync(dir, { recursive: true, force: true }) } catch (e) {} })
 const video = path.join(dir, 'v.mp4')
 const sub = path.join(dir, 's.ass')
 let r = spawnSync(ffmpegPath, ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=640x480:rate=24:duration=3',

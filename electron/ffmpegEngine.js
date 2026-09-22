@@ -632,6 +632,21 @@ function cancelRender() {
   }
 }
 
+// ── Dọn rác .avs sót lại ─────────────────────────────────────
+// File .avs tạm chỉ bị sót khi render bị kill đột ngột (app đóng cứng, mất điện…).
+// Gọi lúc app khởi động — lúc này không có render nào chạy nên mọi file sót đều là rác.
+function cleanupStaleAvs() {
+  let removed = 0
+  try {
+    for (const name of fs.readdirSync(os.tmpdir())) {
+      if (name.startsWith('kull_vietsub_') && name.endsWith('.avs')) {
+        try { fs.unlinkSync(path.join(os.tmpdir(), name)); removed++ } catch (e) {}
+      }
+    }
+  } catch (e) {}
+  return removed
+}
+
 // ─────────────────────────────────────────────────────────────
 module.exports = {
   probeMedia,
@@ -643,4 +658,5 @@ module.exports = {
   escapeFilterPath,
   formatDuration,
   qualityArgs,
+  cleanupStaleAvs,
 }

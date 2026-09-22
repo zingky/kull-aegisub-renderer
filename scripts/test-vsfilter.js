@@ -15,6 +15,8 @@ const engine = require('../electron/ffmpegEngine')
 const { ffmpegPath } = require('../electron/paths')
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kull-vsf-'))
+// Tự dọn thư mục test khi process kết thúc (dù pass hay lỗi)
+process.on('exit', () => { try { fs.rmSync(dir, { recursive: true, force: true }) } catch (e) {} })
 const video = path.join(dir, 'v.mp4')
 const sub = path.join(dir, 'a.ass')
 const out1 = path.join(dir, 'out_mod.mp4')

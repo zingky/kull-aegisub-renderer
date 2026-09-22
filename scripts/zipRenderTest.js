@@ -15,6 +15,8 @@ const paths = require(rp + '/app.asar/electron/paths.js')
 const engine = require(rp + '/app.asar/electron/ffmpegEngine.js')
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kull-zip-'))
+// Tự dọn thư mục test khi process kết thúc (dù pass hay lỗi)
+process.on('exit', () => { try { fs.rmSync(dir, { recursive: true, force: true }) } catch (e) {} })
 const video = path.join(dir, 'sample.mp4')
 const outro = path.join(dir, 'outro.mp4')
 const sub = path.join(dir, 'sub.ass')

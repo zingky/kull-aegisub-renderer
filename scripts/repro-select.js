@@ -12,6 +12,8 @@ const engine = require('../electron/ffmpegEngine')
 const { ffmpegPath } = require('../electron/paths')
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kull-repro-'))
+// Tự dọn thư mục test khi process kết thúc (dù pass hay lỗi)
+process.on('exit', () => { try { fs.rmSync(dir, { recursive: true, force: true }) } catch (e) {} })
 const video = path.join(dir, 'sample.mp4')
 spawnSync(ffmpegPath, ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=640x480:rate=24:duration=3',
   '-c:v', 'libx264', '-preset', 'veryfast', video], { encoding: 'utf8', stdio: 'ignore' })

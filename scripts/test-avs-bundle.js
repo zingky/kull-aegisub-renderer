@@ -7,6 +7,8 @@ const { spawnSync } = require('child_process')
 const { ffmpegPath, BIN_DIR } = require('../electron/paths')
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kull-avs-'))
+// Tự dọn thư mục test khi process kết thúc (dù pass hay lỗi)
+process.on('exit', () => { try { fs.rmSync(dir, { recursive: true, force: true }) } catch (e) {} })
 const video = path.join(dir, 'v.mp4')
 const sub = path.join(dir, 's.ass')
 const avs = path.join(dir, 'test.avs')

@@ -98,6 +98,11 @@ ipcMain.handle('render:cancel', () => {
 
 // ─── Khởi động app ───────────────────────────────────────────
 app.whenReady().then(() => {
+  // Dọn file .avs tạm sót lại từ phiên trước (render bị kill đột ngột)
+  try {
+    const n = engine.cleanupStaleAvs()
+    if (n > 0) console.log(`[cleanup] Đã dọn ${n} file .avs tạm sót lại trong %TEMP%`)
+  } catch (e) {}
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
