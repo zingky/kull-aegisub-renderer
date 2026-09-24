@@ -19,6 +19,8 @@ const ffprobe = path.join(__dirname, '..', 'bin', 'ffprobe.exe')
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kull-trimfade-'))
 const sample = path.join(dir, 'sample.mp4')
 const ass = path.join(dir, 'sub.ass')
+const introV = path.join(dir, 'intro.mp4')
+const outroV = path.join(dir, 'outro.mp4')
 
 let pass = 0
 let fail = 0
@@ -32,6 +34,13 @@ console.log('Thư mục test:', dir)
 spawnSync(ffmpeg, ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=640x480:rate=24:duration=6',
   '-f', 'lavfi', '-i', 'sine=frequency=440:duration=6', '-c:v', 'libx264', '-preset', 'veryfast',
   '-c:a', 'aac', '-shortest', sample], { stdio: 'ignore' })
+
+// Intro 1s (1280x720 + audio) và Outro 1s (320x240, KHÔNG audio) — lệch chuẩn video chính để test scale/pad
+spawnSync(ffmpeg, ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=1280x720:rate=30:duration=1',
+  '-f', 'lavfi', '-i', 'sine=frequency=660:duration=1', '-c:v', 'libx264', '-preset', 'veryfast',
+  '-c:a', 'aac', '-shortest', introV], { stdio: 'ignore' })
+spawnSync(ffmpeg, ['-y', '-v', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=320x240:rate=24:duration=1',
+  '-c:v', 'libx264', '-preset', 'veryfast', outroV], { stdio: 'ignore' })
 
 // ── Phụ đề .ass tối giản ─────────────────────────────────────────────────
 fs.writeFileSync(ass, [
@@ -119,6 +128,21 @@ async function main() {
   // ── 5. Không trim thì giữ đủ 6s (fade chỉ đổi hình, không đổi độ dài) ─
   const dNoFade = fs.existsSync(outNoFade) ? duration(outNoFade) : 0
   check(Math.abs(dNoFade - 6) < 0.4, `5. không trim → giữ đủ 6s (thực tế ${dNoFade.toFixed(2)}s)`)
+
+  // ── 6. HỒI QUY: Intro + trim + Outro + fade. Trước đây engine đòi `options.mergeEnabled`
+  //        mà App không gửi → tick "Ghép Intro/Outro" bị bỏ qua (chỉ ra đoạn chính).
+  //        Giờ chỉ cần CÓ file là ghép → 1s intro + 2s (A→B) + 1s outro = 4s.
+  const outCombo = path.join(dir, 'combo.mp4')
+  const errs6 = []
+  await engine.startRender({ ...base, intro: introV, outro: outroV,
+    trim: { enabled: true, start: 1.5, end: 3.5 }, fades: { enabled: true, duration: 0.3 },
+    outputPath: outCombo }, { onLog: () => {}, onProgress: () => {}, onDone: () => {}, onError: (e) => errs6.push(e) })
+  if (errs6.length) console.log('  [intro+trim+outro] lỗi:', errs6[0].message, String(errs6[0].detail || '').slice(0, 300))
+  check(fs.existsSync(outCombo), '6. ghép Intro + trim + Outro tạo được file output')
+  const dCombo = fs.existsSync(outCombo) ? duration(outCombo) : 0
+  console.log(`     độ dài combo=${dCombo.toFixed(2)}s (kỳ vọng intro 1s + trim 2s + outro 1s = 4.00s)`)
+  check(Math.abs(dCombo - 4) < 0.5,
+    `6. HỒI QUY: Intro + A→B + Outro đều được ghép (thực tế ${dCombo.toFixed(2)}s, không phải 2s)`)
 
   console.log(`\n${fail === 0 ? '✅ TẤT CẢ PASS' : `❌ CÓ ${fail} MỤC SAI`} (${pass} pass / ${fail} fail)`)
   try { fs.rmSync(dir, { recursive: true, force: true }); console.log('Đã dọn thư mục test tạm') } catch {}

@@ -372,8 +372,10 @@ async function buildRenderCommand(options) {
   }
   const metaMap = { main: mainMeta }
   let durationTotal = mainMeta.duration
-  const hasIntro = !!(options.mergeEnabled && options.intro)
-  const hasOutro = !!(options.mergeEnabled && options.outro)
+  // Intro/Outro: chỉ cần có file là ghép, trừ khi UI nói rõ đang tắt (`mergeEnabled === false`).
+  // (UI cũ chỉ gửi file khi đã tick, nên đừng bắt buộc phải có cờ mergeEnabled.)
+  const hasIntro = !!options.intro && options.mergeEnabled !== false
+  const hasOutro = !!options.outro && options.mergeEnabled !== false
   if (hasIntro) {
     metaMap.intro = await probeMedia(options.intro, options.lang)
     durationTotal += metaMap.intro.duration

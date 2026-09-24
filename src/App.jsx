@@ -189,6 +189,8 @@ export default function App() {
       await renderAPI.startRender({
         mainVideo: files.main,
         subtitle: files.subtitle,
+        // Gửi rõ cờ ghép để engine không phải suy đoán (engine vẫn chấp nhận chỉ có file)
+        mergeEnabled: mergeEnabled,
         intro: mergeEnabled ? files.intro : null,
         outro: mergeEnabled ? files.outro : null,
         subtitleEngine: engine,

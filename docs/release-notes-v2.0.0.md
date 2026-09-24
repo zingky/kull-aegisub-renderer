@@ -13,6 +13,10 @@ App desktop **ghép cứng phụ đề ASS/SRT vào video (Hardsub)** — Electr
 | 🖥️ **Cửa sổ 1600×900** | Rộng hơn bản 1.0, toàn bộ tuỳ chọn gọn trong 1 màn hình, không phải cuộn. |
 | ⚡ **Nhẹ hơn, mở nhanh hơn** | Bỏ ~107 MB file thừa trong toolkit + cắt gói ngôn ngữ Chromium (55 → 2), payload giảm 658 → 510 MB. |
 
+## 🐛 Sửa lỗi quan trọng
+
+- **Tick “Ghép Intro/Outro” không có tác dụng**: engine yêu cầu cờ `mergeEnabled` nhưng app không gửi, nên Intro/Outro bị bỏ qua và chỉ xuất đoạn video chính (lỗi có từ 1.0). Nay app gửi cờ rõ ràng và engine chỉ cần *có file* là ghép → đã có test hồi quy (`npm run test:trim`, case 6: intro 1s + A→B 2s + outro 1s = 4.00s).
+
 ## 📥 Tải về (không cần cài đặt)
 
 | Bản | Dung lượng | Mở app | Ghi chú |
@@ -41,7 +45,7 @@ App desktop **ghép cứng phụ đề ASS/SRT vào video (Hardsub)** — Electr
 
 ## ✅ Kiểm thử trước khi phát hành
 
-- Render thật bằng FFmpeg kèm sẵn: **9/9 PASS** (`npm run test:trim`) — trim đúng 2.00s, fade làm khung đầu tối hoàn toàn (luminance 0 vs 129), export clip A→B giữ `.mp4`
+- Render thật bằng FFmpeg kèm sẵn: **11/11 PASS** (`npm run test:trim`) — trim đúng 2.00s, fade làm khung đầu tối hoàn toàn (luminance 0 vs 129), export clip A→B giữ `.mp4`, ghép Intro+A→B+Outro = 4.00s
 - `npm run test:e2e` — render libass + ghép Intro/Outro: PASS
 - `npm run test:repro` — chọn file không crash UI: PASS
 - `npm run test:i18n` — song ngữ VI/EN parity 119 khoá: PASS
