@@ -7,9 +7,9 @@ const { JSDOM, VirtualConsole } = require('jsdom')
 const fs = require('fs')
 const path = require('path')
 
-const assetsDir = path.join(__dirname, '..', 'dist', 'assets')
-const jsBundle = fs.readdirSync(assetsDir).find((f) => f.endsWith('.js') && !f.endsWith('.map'))
-const bundleSrc = fs.readFileSync(path.join(assetsDir, jsBundle), 'utf8')
+const { entryBundle, runnableBundle, mainCss } = require('./_bundle')
+const jsBundle = entryBundle().f
+const bundleSrc = runnableBundle()
 
 const vc = new VirtualConsole()
 vc.on('error', () => {})
@@ -47,8 +47,7 @@ global.window = w
 
 async function main() {
   // Shim import.meta.url cho jsdom (bundle vite dùng URL tương đối của asset)
-  w.eval('var import_meta = { url: "file:///C:/app/index.html" };')
-  w.eval(bundleSrc.replace(/import\.meta\.url/g, 'import_meta.url'))
+  w.eval(bundleSrc)
   await new Promise((r) => setTimeout(r, 800))
   const txt = (el) => el.textContent.replace(/\s+/g, ' ')
   const has = (el, t) => txt(el).includes(t)
@@ -76,8 +75,7 @@ async function main() {
   // Không còn hiệu ứng liquid glass (đã gỡ để tối ưu tốc độ mở app)
   const glass = [...w.document.querySelectorAll('#root .glass-btn')]
   check(glass.length === 0, `không còn class glass-btn nào (thấy ${glass.length})`)
-  const css = fs.readFileSync(path.join(__dirname, '..', 'dist', 'assets',
-    fs.readdirSync(assetsDir).find((f) => f.endsWith('.css'))), 'utf8')
+  const css = mainCss()
   check(!css.includes('.glass-btn'), 'CSS .glass-btn đã gỡ khỏi bundle')
   if (fail) { console.log(`\n❌ QUALITY/LOG SAI (${fail})`); process.exit(1) }
   console.log('\n✅ MỤC 3 + LOG ĐÚNG YÊU CẦU (KHÔNG LIQUID GLASS)')

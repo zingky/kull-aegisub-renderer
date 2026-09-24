@@ -33,9 +33,9 @@ check(viKeys.includes('app.name') && viKeys.includes('eta.hour') && viKeys.inclu
 check(/app\.name':\s*'Kull Aegisub Renderer'/.test(viBlock) && /app\.name':\s*'Kull Aegisub Renderer'/.test(enBlock), "tên app là 'Kull Aegisub Renderer' ở cả 2 ngôn ngữ")
 
 // ─────────────────── 2. Nút đổi ngôn ngữ trên bundle thật ───────────────────
-const assetsDir = path.join(__dirname, '..', 'dist', 'assets')
-const jsBundle = fs.readdirSync(assetsDir).find((f) => f.endsWith('.js') && !f.endsWith('.map'))
-const bundleSrc = fs.readFileSync(path.join(assetsDir, jsBundle), 'utf8')
+const { entryBundle, runnableBundle } = require('./_bundle')
+const jsBundle = entryBundle().f
+const bundleSrc = runnableBundle()
 console.log(`\n[2] Bundle: ${jsBundle}`)
 
 const vc = new VirtualConsole()
@@ -78,8 +78,7 @@ const findBtn = (label) => [...w.document.querySelectorAll('button')].find((b) =
 
 async function main() {
   // Shim import.meta.url cho jsdom (bundle vite dùng URL tương đối của asset)
-  w.eval('var import_meta = { url: "file:///C:/app/index.html" };')
-  w.eval(bundleSrc.replace(/import\.meta\.url/g, 'import_meta.url'))
+  w.eval(bundleSrc)
   await new Promise((r) => setTimeout(r, 900))
 
   const vi = txt()

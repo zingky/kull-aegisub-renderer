@@ -6,6 +6,7 @@
  */
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron')
 const path = require('path')
+const fs = require('fs')
 const engine = require('./ffmpegEngine')
 const { checkBinaries } = require('./paths')
 
@@ -15,10 +16,10 @@ const DEV_URL = process.env.VITE_DEV_SERVER_URL
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1300,
-    height: 860,
-    minWidth: 1100,
-    minHeight: 800,
+    width: 1600,
+    height: 900,
+    minWidth: 1280,
+    minHeight: 820,
     title: 'Kull Aegisub Renderer',
     icon: app.isPackaged
       ? path.join(process.resourcesPath, 'icon.ico')
@@ -94,6 +95,33 @@ ipcMain.handle('render:start', async (_e, options) => {
 
 ipcMain.handle('render:cancel', () => {
   engine.cancelRender()
+})
+
+// ─── IPC: Trim A→B (xuất clip riêng) ─────────────────────────
+ipcMain.handle('trim:start', async (_e, options) => {
+  if (!mainWindow) return
+  const send = (channel, payload) => {
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload)
+  }
+  await engine.exportTrimClip(options, {
+    onProgress: (p) => send('render:progress', p),
+    onLog: (line, level = 'info') => send('render:log', { line, level }),
+    onDone: (d) => send('render:done', d),
+    onError: (e) => send('render:error', e),
+  })
+})
+
+// ─── IPC: Thumbnail timeline cho Trim ────────────────────────
+ipcMain.handle('trim:thumbs', async (_e, videoPath) => engine.extractThumbs(videoPath))
+ipcMain.handle('trim:cleanup-thumbs', (_e, dir) => engine.cleanupThumbs(dir))
+
+// ─── IPC: đọc file phụ đề (cho preview .ass live) ────────────
+ipcMain.handle('read-file-text', (_e, filePath) => {
+  try {
+    return fs.readFileSync(filePath, 'utf8')
+  } catch (e) {
+    return null
+  }
 })
 
 // ─── Khởi động app ───────────────────────────────────────────

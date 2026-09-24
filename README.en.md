@@ -15,16 +15,16 @@ Desktop app that **burns (hardsubs) ASS/SRT subtitles into video** — **Electro
 
 ## 📥 Prebuilt download (no installation)
 
-All builds on [Releases](https://github.com/zingky/kull-aegisub-renderer/releases/tag/v1.0.0). Two options:
+All builds on [Releases](https://github.com/zingky/kull-aegisub-renderer/releases/tag/v2.0.0). Two options:
 
 | Build | Size | Startup | Notes |
 |---|---|---|---|
-| **[ZIP - win-x64](https://github.com/zingky/kull-aegisub-renderer/releases/download/v1.0.0/KullAegisubRenderer-1.0.0-win-x64.zip)** ⭐ | ~191 MB | **~0.4 s** | Fastest — extract once, then run |
-| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v1.0.0/KullAegisubRenderer-1.0.0-portable.exe)** | ~129 MB | 6-12 s | Single file, easy to carry around |
+| **[ZIP - win-x64](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.0/KullAegisubRenderer-2.0.0-win-x64.zip)** ⭐ | ~194 MB | **~0.4 s** | Fastest — extract once, then run |
+| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.0/KullAegisubRenderer-2.0.0-portable.exe)** | ~131 MB | 6-12 s | Single file, easy to carry around |
 
 ### How to use the ZIP build (recommended)
 
-1. Download `KullAegisubRenderer-1.0.0-win-x64.zip` → right-click → **Extract All…** into any folder (e.g. `D:\KullAegisubRenderer`).
+1. Download `KullAegisubRenderer-2.0.0-win-x64.zip` → right-click → **Extract All…** into any folder (e.g. `D:\KullAegisubRenderer`).
 2. Open that folder and run **`Kull Aegisub Renderer.exe`**.
 3. On first launch SmartScreen may warn (unsigned app) → **More info → Run anyway**. Afterwards it opens in ~0.4 s.
 
@@ -40,6 +40,17 @@ Just double-click the exe — no install, no registry changes, delete the file t
 
 ---
 
+## 🆕 What's new in 2.0
+
+| Feature | Details |
+|---|---|
+| 🎬 **Built-in preview** | Pick a video and the player shows up: play/pause, step **1 frame · 1s · 5s**, thumbnail timeline, **live subtitle preview over the frame** — verify the right video/sub before rendering |
+| ✂️ **A → B trimming** | Set A/B marks with buttons → render only that range |
+| ⬇️ **Export A→B clip** | Export the A→B range alone, **no subtitles**, **original format kept** |
+| 🌓 **Fade in / out** | Toggle + **custom duration** (default 100 ms). Automatically applies to the first & last segment of the result, Intro/Outro included |
+
+---
+
 ## ✨ Features
 
 | Group | Details |
@@ -52,16 +63,17 @@ Just double-click the exe — no install, no registry changes, delete the file t
 | **Intro/Outro merge** | Auto scale + pad to the main video standard, 3-segment concat, silent segments get generated audio |
 | **Progress & Log** | Progress % · FPS · speed `×` · **text ETA ("1 h 23 min 45 s")** · stats logged every 5% (frame/fps/bitrate/size) · **Copy whole log** |
 | **Language** | **VI / EN switch on the header** — switches the whole UI *and* engine logs instantly, remembers your choice |
-| **UI** | Compact single 1300×860 window, no page scrolling, lightweight & fast to open, Error Boundary to prevent blank screens |
+| **UI** | Compact single 1600×900 window, no page scrolling, lightweight & fast to open, Error Boundary to prevent blank screens |
 
 ---
 
 ## 🖱️ How to use
 
-1. **Section 1 · Source Files**: drop the **main video** + **subtitle file**. To merge clips, tick **☑ Merge Intro/Outro** then drop the Intro/Outro files.
-2. **Section 2 · Engine & Hardware**: keep the defaults (`VSFilterMod.dll` + `Auto`) if unsure.
-3. **Section 3 · Render Quality**: *"Keep original"* produces a file nearly identical to the source — only with the subtitles burned in.
-4. **Section 4 · Output & Controls**: pick the output folder, file name (default `<source_name>_exported`), **format** → press **START RENDER**. Watch progress/ETA/logs; when done, press **Open output folder**. To stop, press **CANCEL** (kills the whole FFmpeg process tree).
+1. **Section 1 · Source Files**: drop the **main video** + **subtitle file**. To merge clips, tick **☑ Merge Intro/Outro** then drop the Intro/Outro files. Enable **Fade in/out** if needed (duration in ms, default 100).
+2. **Preview** (right column, appears as soon as a video is picked): play/pause, step 1 frame / 1s / 5s, drag the timeline — subtitles render right on the frame so you can verify the files loaded correctly. To **trim A→B**, set the **A** and **B** marks with the two buttons (taken from the current playback position), or press **Export A→B clip** to export that range alone (no subtitles, original format kept).
+3. **Section 2 · Engine & Hardware**: keep the defaults (`VSFilterMod.dll` + `Auto`) if unsure.
+4. **Section 3 · Render Quality**: *"Keep original"* produces a file nearly identical to the source — only with the subtitles burned in.
+5. **Section 4 · Output & Controls**: pick the output folder, file name (default `<source_name>_exported`), **format** → press **START RENDER**. Watch progress/ETA/logs; when done, press **Open output folder**. To stop, press **CANCEL** (kills the whole FFmpeg process tree).
 
 ---
 
@@ -80,7 +92,7 @@ npm run dist         # → release/KullAegisubRenderer-<version>-portable.exe  (
 ### Updating the Release body
 
 ```bash
-node scripts/setReleaseNotes.js docs/release-notes-v1.0.0.md v1.0.0
+node scripts/setReleaseNotes.js docs/release-notes-v2.0.0.md v2.0.0
 ```
 
 > ⚠️ **Never write release notes with PowerShell.** PowerShell 5 reads a BOM-less `.ps1` as ANSI (CP1252), so non-ASCII text is already corrupted before it reaches GitHub. The Node script above reads/writes proper UTF-8 and then **re-fetches the release and compares hashes** to prove the body matches the source file.
@@ -93,6 +105,7 @@ node scripts/setReleaseNotes.js docs/release-notes-v1.0.0.md v1.0.0
 npm run test:e2e      # creates a sample video + real render (libass + outro merge) with bin/ffmpeg.exe
 npm run test:repro    # regression: selecting a file must not crash the UI (jsdom + real bundle)
 npm run test:i18n     # bilingual: dictionary parity + VI/EN switch changes UI + localStorage persistence
+npm run test:trim     # real render: A→B trim, first/last fade (luminance check), export A→B clip
 node scripts/checkRows.js       # section 2 layout structure (buttons grouped per row)
 node scripts/checkQuality.js    # section 3 structure + console log + no heavy button effects
 node scripts/test-vsfilter.js   # real render through AviSynth+ (auto-swap VSFilterMod → VSFilter)

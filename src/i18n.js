@@ -140,6 +140,22 @@ const vi = {
   'eta.hour': '{n} giờ',
   'eta.min': '{n} phút',
   'eta.sec': '{n} giây',
+
+  // ── Preview + Trim (v2.0) ──
+  'pv.title': 'Xem trước & Cắt đoạn (A→B)',
+  'pv.assFail': 'Không preview được phụ đề (file render vẫn chuẩn)',
+  'pv.codecFail': 'Codec này không xem trước được trong app — render vẫn bình thường.',
+  'pv.toStart': 'Về đầu',
+  'pv.toEnd': 'Tới cuối',
+  'pv.setA': 'Đặt A',
+  'pv.setB': 'Đặt B',
+  'pv.exportClip': 'Xuất clip A→B',
+  'pv.exportTip': 'Xuất riêng đoạn A→B (không phụ đề, giữ định dạng gốc)',
+  'pv.trimOn': 'SẼ CẮT A→B khi render',
+  'fade.label': 'Fade đầu & cuối video',
+  'fade.tip': 'Video mờ dần từ đen ở khung đầu và mờ dần sang đen ở khung cuối. Có Intro/Outro thì fade áp cho đoạn đầu tiên và đoạn cuối cùng của thành phẩm.',
+  'fade.durLabel': 'Thời gian fade:',
+  'fade.unit': 'ms',
 }
 
 const en = {
@@ -268,6 +284,22 @@ const en = {
   'msg.startFail': 'Cannot start render: {msg}',
   'stat.speed': 'speed',
   'stat.size': 'size',
+
+  // ── Preview + Trim (v2.0) ──
+  'pv.title': 'Preview & Trim (A→B)',
+  'pv.assFail': 'Subtitle preview unavailable (final render unaffected)',
+  'pv.codecFail': 'This codec cannot be previewed in-app — rendering still works normally.',
+  'pv.toStart': 'Go to start',
+  'pv.toEnd': 'Go to end',
+  'pv.setA': 'Set A',
+  'pv.setB': 'Set B',
+  'pv.exportClip': 'Export clip A→B',
+  'pv.exportTip': 'Export the A→B segment only (no subtitles, original format kept)',
+  'pv.trimOn': 'WILL TRIM A→B on render',
+  'fade.label': 'Fade in & out',
+  'fade.tip': 'Fades from black on the first frame and to black on the last frame. When Intro/Outro is used, the fade applies to the first and last segment of the final video.',
+  'fade.durLabel': 'Fade duration:',
+  'fade.unit': 'ms',
 
   // ── Text ETA ──
   'eta.hour': '{n} h',

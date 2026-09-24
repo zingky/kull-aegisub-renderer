@@ -361,6 +361,15 @@ async function buildRenderCommand(options) {
   const t = makeT(options.lang)
   // 9a. Probe các file liên quan
   const mainMeta = await probeMedia(options.mainVideo, options.lang)
+  // TRIM: cắt đoạn A→B của video chính (giây)
+  const trim = options.trim && options.trim.enabled && options.trim.end > options.trim.start
+    ? { start: Number(options.trim.start), end: Number(options.trim.end) }
+    : null
+  if (trim) {
+    mainMeta.trimOffset = trim.start
+    mainMeta.duration = Math.max(0.1, trim.end - trim.start)
+    mainMeta.trimmed = true
+  }
   const metaMap = { main: mainMeta }
   let durationTotal = mainMeta.duration
   const hasIntro = !!(options.mergeEnabled && options.intro)
@@ -408,14 +417,43 @@ async function buildRenderCommand(options) {
   const useConcat = hasIntro || hasOutro
   const subInput = subPlan.type === 'avs' ? subPlan.avsPath : options.mainVideo
 
-  const pushSegment = (file, meta, isMain) => {
+  // FADE: tùy chọn fade in/out từng phân đoạn (options.fades = { enabled, duration })
+  const fades = options.fades && options.fades.enabled && Number(options.fades.duration) > 0
+    ? { d: Math.max(0.05, Math.min(3, Number(options.fades.duration))) }
+    : null
+  const fadeChain = (segDur, isFirst, isLast) => {
+    if (!fades) return ''
+    const parts = []
+    if (isFirst) parts.push(`fade=t=in:st=0:d=${fades.d}`)
+    if (isLast && segDur > fades.d) parts.push(`fade=t=out:st=${Math.max(0, segDur - fades.d).toFixed(3)}:d=${fades.d}`)
+    return parts.length ? parts.join(',') + ',' : ''
+  }
+  const audioFadeChain = (segDur, isFirst, isLast) => {
+    if (!fades) return ''
+    const parts = []
+    if (isFirst) parts.push(`afade=t=in:st=0:d=${fades.d}`)
+    if (isLast && segDur > fades.d) parts.push(`afade=t=out:st=${Math.max(0, segDur - fades.d).toFixed(3)}:d=${fades.d}`)
+    return parts.length ? parts.join(',') + ',' : ''
+  }
+  let audioFaded = false // cần re-encode audio khi có fade
+
+  const pushSegment = (file, meta, isMain, isFirst, isLast) => {
+    // TRIM: -ss A -t (B-A) áp vào input video chính (input options — trước -i)
+    if (isMain && trim) {
+      args.push('-ss', String(trim.start), '-t', String(Math.max(0.1, trim.end - trim.start)))
+    }
     const idx = inputIndex
     args.push('-i', file)
     inputIndex++
+    const segDur = meta.duration || mainMeta.duration || 0
+    const vFade = fades ? fadeChain(segDur, isFirst, isLast) : ''
+    const aFade = fades ? audioFadeChain(segDur, isFirst, isLast) : ''
+    if (aFade) audioFaded = true
     let vFilter = null
     if (!isMain) vFilter = buildScalePadFilter(W, H, FPS)
     else if (options.quality === 'custom') vFilter = `scale=${W}:${H},fps=${FPS},setsar=1`
     if (isMain && subPlan.type === 'libass') vFilter = vFilter ? `${vFilter},${subPlan.filter}` : subPlan.filter
+    if (vFade) vFilter = vFilter ? `${vFade}${vFilter}` : vFade.replace(/,$/, '')
     let vref
     if (vFilter) {
       filterParts.push(`[${idx}:v]${vFilter}[v${idx}]`)
@@ -425,7 +463,12 @@ async function buildRenderCommand(options) {
     }
     let aref
     if (meta.hasAudio) {
-      aref = `[${idx}:a]`
+      if (aFade) {
+        filterParts.push(`[${idx}:a]${aFade.replace(/,$/, '')}[a${idx}]`)
+        aref = `[a${idx}]`
+      } else {
+        aref = `[${idx}:a]`
+      }
     } else {
       const sIdx = inputIndex
       args.push('-f', 'lavfi', '-t', String(Math.max(0.1, meta.duration || 0.1)), '-i', 'anullsrc=r=48000:cl=stereo')
@@ -436,17 +479,28 @@ async function buildRenderCommand(options) {
   }
 
   if (useConcat) {
-    if (hasIntro) pushSegment(options.intro, metaMap.intro, false)
-    pushSegment(subInput, mainMeta, true)
-    if (hasOutro) pushSegment(options.outro, metaMap.outro, false)
+    if (hasIntro) pushSegment(options.intro, metaMap.intro, false, true, !hasOutro)
+    pushSegment(subInput, mainMeta, true, !hasIntro, !hasOutro)
+    if (hasOutro) pushSegment(options.outro, metaMap.outro, false, false, true)
     filterParts.push(`${concatRefs.join('')}concat=n=${concatRefs.length}:v=1:a=1[vout][aout]`)
     args.push('-filter_complex', filterParts.join(';'))
     args.push('-map', '[vout]', '-map', '[aout]')
   } else {
+    // TRIM: input options áp cho input video chính duy nhất
+    if (trim) args.push('-ss', String(trim.start), '-t', String(Math.max(0.1, trim.end - trim.start)))
     args.push('-i', subInput)
-    if (subPlan.type === 'libass') args.push('-vf', subPlan.filter)
+    const vFade = fades ? fadeChain(mainMeta.duration, true, true).replace(/,$/, '') : ''
+    const aFade = fades ? audioFadeChain(mainMeta.duration, true, true).replace(/,$/, '') : ''
+    if (aFade) audioFaded = true
+    let vf = subPlan.type === 'libass' ? subPlan.filter : null
+    if (options.quality === 'custom') vf = vf ? `scale=${W}:${H},fps=${FPS},setsar=1,${vf}` : `scale=${W}:${H},fps=${FPS},setsar=1`
+    if (vFade) vf = vf ? `${vFade},${vf}` : vFade
+    if (vf) args.push('-vf', vf)
     args.push('-map', '0:v:0')
-    if (mainMeta.hasAudio) args.push('-map', '0:a:0')
+    if (mainMeta.hasAudio) {
+      args.push('-map', '0:a:0')
+      if (aFade) args.push('-af', aFade)
+    }
   }
 
   // 9f. Video encoder — Constrained VBR
@@ -467,8 +521,8 @@ async function buildRenderCommand(options) {
   args.push('-maxrate', `${qa.maxrate}k`)
   args.push('-bufsize', `${qa.bufsize}k`)
 
-  // 9g. Audio — copy khi không ghép, re-encode khi concat/avs (đồng bộ chuẩn)
-  if (useConcat || subPlan.type === 'avs') {
+  // 9g. Audio — copy khi không ghép, re-encode khi concat/avs/fade (đồng bộ chuẩn)
+  if (useConcat || subPlan.type === 'avs' || audioFaded) {
     args.push('-c:a', 'aac', '-b:a', '192k', '-ar', '48000')
   } else if (mainMeta.hasAudio) {
     args.push('-c:a', 'copy')
@@ -648,6 +702,133 @@ function cleanupStaleAvs() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// 11. EXPORT CLIP CẮT A→B — video riêng, KHÔNG phụ đề,
+//     giữ định dạng gốc (container + codec family + thông số gốc)
+// ─────────────────────────────────────────────────────────────
+async function exportTrimClip(options, events) {
+  const t = makeT(options.lang)
+  const onLog = events.onLog || (() => {})
+  const onProgress = events.onProgress || (() => {})
+  const onDone = events.onDone || (() => {})
+  const onError = events.onError || (() => {})
+  cancelRequested = false
+
+  const start = Number(options.trim?.start)
+  const end = Number(options.trim?.end)
+  if (!isFinite(start) || !isFinite(end) || end <= start) {
+    onError({ message: t('eng.errGeneric'), detail: 'Invalid trim range' })
+    return
+  }
+  const dur = end - start
+
+  onLog(t('eng.start'))
+  let meta
+  try {
+    onLog(t('eng.probing'))
+    meta = await probeMedia(options.mainVideo, options.lang)
+  } catch (e) {
+    onError({ message: e.message, detail: '' })
+    return
+  }
+
+  // Codec giữ nguyên family gốc; chất lượng theo file gốc (Constrained VBR)
+  const codecFamily = String(meta.videoCodec).toLowerCase().includes('265') ||
+    String(meta.videoCodec).toLowerCase().includes('hevc') ? 'libx265' : 'libx264'
+  const available = await detectEncoders()
+  const gpu = available.includes('nvenc') ? 'h264_nvenc' : available.includes('qsv') ? 'h264_qsv' : available.includes('amf') ? 'h264_amf' : null
+  const encoder = gpu && codecFamily === 'libx264' ? gpu : codecFamily
+
+  const qa = qualityArgs('original', meta, null)
+  const args = ['-hide_banner', '-y', '-ss', String(start), '-t', String(dur), '-i', options.mainVideo]
+  // Độ chính xác frame: decode lại toàn bộ (seek input nhanh + accurate_seek mặc định)
+  args.push('-map', '0:v:0')
+  if (meta.hasAudio) args.push('-map', '0:a:0')
+  args.push('-c:v', encoder)
+  if (encoder === 'libx264' || encoder === 'libx265') args.push('-preset', 'slow')
+  else if (encoder.includes('nvenc')) args.push('-rc', 'vbr', '-preset', 'p6', '-tune', 'hq')
+  else if (encoder.includes('qsv')) args.push('-preset', 'medium')
+  else if (encoder.includes('amf')) args.push('-quality', 'quality')
+  args.push('-pix_fmt', 'yuv420p')
+  args.push('-b:v', `${qa.bitrate}k`, '-maxrate', `${qa.maxrate}k`, '-bufsize', `${qa.bufsize}k`)
+  if (meta.hasAudio) args.push('-c:a', 'aac', '-b:a', '192k')
+  const ext = path.extname(options.outputPath || '').toLowerCase()
+  if (['.mp4', '.mov', '.m4v'].includes(ext)) args.push('-movflags', '+faststart')
+  args.push(options.outputPath)
+  onLog(t('eng.output', { path: options.outputPath }))
+
+  return new Promise((resolveOutcome) => {
+    let child
+    try {
+      child = spawn(ffmpegPath, args, { windowsHide: true })
+    } catch (err) {
+      onError({ message: t('eng.errStart', { msg: err.message }), detail: '' })
+      return resolveOutcome({ kind: 'error' })
+    }
+    currentChild = child
+    let last = ''
+    child.stderr.on('data', (chunk) => {
+      last += chunk.toString('utf8')
+      const lines = last.split(/\r\n|\n|\r/)
+      last = lines.pop()
+      for (const line of lines) {
+        if (line.includes('frame=') && line.includes('time=')) {
+          const p = parseProgressLine(line, dur)
+          if (p) onProgress(p)
+        }
+      }
+    })
+    child.on('error', (err) => {
+      currentChild = null
+      onError({ message: t('eng.errRun', { msg: err.message }), detail: '' })
+      resolveOutcome({ kind: 'error' })
+    })
+    child.on('close', (code) => {
+      currentChild = null
+      if (cancelRequested) {
+        onLog(t('eng.canceled'), 'warn')
+        onDone({ outputPath: options.outputPath, canceled: true })
+        return resolveOutcome({ kind: 'canceled' })
+      }
+      if (code === 0) {
+        onLog(t('eng.done', { dur: formatDuration(dur) }), 'success')
+        onDone({ outputPath: options.outputPath, duration: dur })
+        resolveOutcome({ kind: 'done' })
+      } else {
+        onError({ message: t('eng.errExit', { code }), detail: last.slice(-800) })
+        resolveOutcome({ kind: 'error' })
+      }
+    })
+  })
+}
+
+// ── Thumbnail timeline cho Trim (trả về mảng {t, file}) ──────
+async function extractThumbs(videoPath, count = 20) {
+  const meta = await probeMedia(videoPath, 'vi')
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kull_thumbs_'))
+  const thumbs = []
+  const n = Math.max(2, Math.min(40, count))
+  for (let i = 0; i < n; i++) {
+    const t = (meta.duration * i) / n
+    const file = path.join(dir, `th_${String(i).padStart(3, '0')}.jpg`)
+    // spawn tuần tự (nhẹ, tránh 20 tiến trình cùng lúc)
+    await new Promise((resolve) => {
+      let c
+      try {
+        c = spawn(ffmpegPath, ['-hide_banner', '-loglevel', 'error', '-ss', String(t), '-i', videoPath, '-frames:v', '1', '-vf', 'scale=160:-2', '-q:v', '5', '-y', file], { windowsHide: true })
+      } catch (e) { return resolve() }
+      c.on('error', () => resolve())
+      c.on('close', () => resolve())
+    })
+    if (fs.existsSync(file) && fs.statSync(file).size > 0) thumbs.push({ t, file })
+  }
+  return { thumbs, dir }
+}
+
+function cleanupThumbs(dir) {
+  try { fs.rmSync(dir, { recursive: true, force: true }) } catch (e) {}
+}
+
+// ─────────────────────────────────────────────────────────────
 module.exports = {
   probeMedia,
   startRender,
@@ -659,4 +840,7 @@ module.exports = {
   formatDuration,
   qualityArgs,
   cleanupStaleAvs,
+  exportTrimClip,
+  extractThumbs,
+  cleanupThumbs,
 }

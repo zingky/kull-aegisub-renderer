@@ -7,9 +7,11 @@ import EngineSelect from './components/EngineSelect'
 import HardwareSelect from './components/HardwareSelect'
 import QualitySelect from './components/QualitySelect'
 import MergeToggle from './components/MergeToggle'
+import FadeToggle from './components/FadeToggle'
 import OutputControls from './components/OutputControls'
 import ProgressPanel from './components/ProgressPanel'
 import ConsoleLog from './components/ConsoleLog'
+import VideoPreview from './components/VideoPreview'
 import LangSwitch from './components/LangSwitch'
 import { useLang } from './i18n'
 import { basename, dirname, extname, stripExt, withExt, formatDuration, formatBytes } from './utils/format'
@@ -37,6 +39,8 @@ export default function App() {
   const [quality, setQuality] = useState('original')
   const [custom, setCustom] = useState({ resolution: '1280x720', fps: '30', bitrate: '2000' })
   const [mergeEnabled, setMergeEnabled] = useState(false)
+  const [fadeEnabled, setFadeEnabled] = useState(false)
+  const [fadeMs, setFadeMs] = useState(100)
   const [outputDir, setOutputDir] = useState('')
   const [outputName, setOutputName] = useState('')
   const [outputFormat, setOutputFormat] = useState('mp4')
@@ -191,6 +195,10 @@ export default function App() {
         hardware,
         quality,
         custom,
+        // Trim A→B do VideoPreview quản lý (qua window.__trimState)
+        trim: (window.__trimState && window.__trimState.enabled) ? window.__trimState : { enabled: false },
+        // Fade đầu/cuối — UI nhập ms, engine nhận giây (0.05–3s)
+        fades: { enabled: fadeEnabled, duration: Math.max(50, Math.min(3000, Number(fadeMs) || 100)) / 1000 },
         // Ngôn ngữ UI → engine ghi log đúng ngôn ngữ đã chọn
         lang,
         // Ép đuôi file xuất theo định dạng đã chọn (mp4/mkv/mov/webm/avi)
@@ -262,6 +270,7 @@ export default function App() {
             <MergeToggle checked={mergeEnabled} onChange={setMergeEnabled} t={t} />
             <DropZone slot="intro" file={files.intro} meta={metas.intro} disabled={!mergeEnabled} t={t} onFile={(p) => handleFile('intro', p)} onClear={() => handleClear('intro')} />
             <DropZone slot="outro" file={files.outro} meta={metas.outro} disabled={!mergeEnabled} t={t} onFile={(p) => handleFile('outro', p)} onClear={() => handleClear('outro')} />
+            <FadeToggle checked={fadeEnabled} onChange={setFadeEnabled} ms={fadeMs} onMsChange={setFadeMs} t={t} />
           </div>
 
           <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-3" id="sec2">
@@ -280,8 +289,20 @@ export default function App() {
           )}
         </div>
 
-          {/* Cột phải: chất lượng + output */}
+          {/* Cột phải: preview + chất lượng + output */}
         <div className="min-h-0 overflow-y-auto space-y-3 pr-0.5 min-w-0">
+          {files.main && (
+            <VideoPreview
+              videoPath={files.main.path}
+              subPath={files.subtitle?.path || null}
+              subName={files.subtitle ? basename(files.subtitle.path) : ''}
+              meta={metas.main}
+              status={status}
+              outputPath={outputDir && outputName ? `${outputDir}\\${withExt(outputName, outputFormat)}` : ''}
+              lang={lang}
+              t={t}
+            />
+          )}
           <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-3">
             <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">{t('sec3.title')}</h2>
             <QualitySelect value={quality} onChange={setQuality} custom={custom} onCustomChange={setCustom} t={t} />

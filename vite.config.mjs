@@ -12,5 +12,11 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    // ES module output — bắt buộc cho code-splitting (JASSUB web worker)
+    rollupOptions: { output: { format: 'es' } },
+  },
+  worker: {
+    // Worker cũng phải ES (JASSUB worker dùng code-splitting, iife không hỗ trợ)
+    format: 'es',
   },
 })

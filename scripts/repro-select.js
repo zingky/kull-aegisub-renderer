@@ -21,8 +21,10 @@ console.log('Video mẫu:', video)
 
 // Bundle production được build từ `npm run build`
 const assetsDir = path.join(__dirname, '..', 'dist', 'assets')
-const jsBundle = fs.readdirSync(assetsDir).find((f) => f.endsWith('.js') && !f.endsWith('.map'))
-const bundleSrc = fs.readFileSync(path.join(assetsDir, jsBundle), 'utf8')
+// Từ v2.0 có code-splitting (JASSUB worker/fonts) → dùng helper chọn đúng entry chunk (createRoot)
+const { entryBundle, runnableBundle } = require('./_bundle')
+const jsBundle = entryBundle().f
+const bundleSrc = runnableBundle()
 console.log('Bundle:', jsBundle, `(${(bundleSrc.length / 1024).toFixed(0)} KB)`)
 
 const vc = new VirtualConsole()
@@ -30,7 +32,8 @@ vc.on('error', (...a) => console.log('  [jsdom-console-error]', ...a))
 vc.on('warn', (...a) => console.log('  [jsdom-console-warn]', ...a))
 
 const dom = new JSDOM('<!doctype html><html><body><div id="root"></div></body></html>', {
-  runScripts: 'outside-only',
+  runScripts: 'dangerously', // cho phép <script type="module"> chạy trong DOM
+  resources: 'usable', // nạp script từ data URL
   pretendToBeManual: true,
   pretendToBeVisual: true,
   url: 'file:///repo/index.html',
@@ -49,7 +52,7 @@ w.renderAPI = {
   openFolder: async () => '',
   checkBin: async () => ({ ffmpeg: true, ffprobe: true, vsfilter: true, vsfiltermod: true, avisynth: true }),
   getEncoders: async () => ['cpu'],
-  getAppVersion: async () => '1.0.0-test',
+  getAppVersion: async () => '2.0.0-test',
   onProgress: (cb) => () => {},
   onLog: (cb) => () => {},
   onDone: (cb) => () => {},
@@ -73,10 +76,20 @@ w.addEventListener('error', (e) => console.log('  ⚠ WINDOW ERROR:', e.message,
 w.addEventListener('unhandledrejection', (e) => console.log('  ⚠ UNHANDLED REJECTION:', String(e.reason && e.reason.stack || e.reason)))
 
 async function main() {
-  // Nạp bundle app (shim import.meta.url cho jsdom — bundle vite dùng URL tương đối của asset)
-  w.eval('var import_meta = { url: "file:///C:/app/index.html" };')
-  w.eval(bundleSrc.replace(/import\.meta\.url/g, 'import_meta.url'))
-  await new Promise((r) => setTimeout(r, 800)) // chờ React mount + effects
+  // jsdom KHÔNG hỗ trợ ES module (`<script type="module">` bị bỏ qua) → nạp bundle bằng eval.
+  // `bundleSrc` từ `_bundle.runnableBundle()` đã shim `import.meta.url` + bỏ re-export ESM.
+  try {
+    w.eval(bundleSrc)
+  } catch (e) {
+    console.log('  ❌ Lỗi nạp bundle:', (e && e.message) || e)
+    process.exit(1)
+  }
+  // chờ tối đa 8s cho đến khi #root có nội dung
+  for (let i = 0; i < 40; i++) {
+    await new Promise((r) => setTimeout(r, 200))
+    if (w.document.querySelector('#root')?.children.length) break
+  }
+  w.__scriptDone = true
 
   const root = w.document.querySelector('#root')
   console.log('Sau khi mount, #root có', root.children.length, 'phần tử')

@@ -1,7 +1,7 @@
 {
   "name": "kull-aegisub-renderer",
   "productName": "Kull Aegisub Renderer",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Desktop app that hardsubs ASS/SRT subtitles into video (Vietsub) with FFmpeg + VSFilter — Electron + React + TailwindCSS",
   "main": "electron/main.js",
   "author": "Kull Aegisub",
@@ -14,10 +14,12 @@
     "test:e2e": "node scripts/e2eTest.js",
     "test:repro": "node scripts/repro-select.js",
     "test:i18n": "node scripts/checkI18n.js",
+    "test:trim": "node scripts/testTrimFade.js",
     "dist": "npm run build && electron-builder"
   },
   "dependencies": {
     "clsx": "^2.1.1",
+    "jassub": "^2.5.16",
     "lucide-react": "^0.445.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

@@ -15,16 +15,16 @@ App desktop **ghép cứng phụ đề ASS/SRT vào video (Hardsub)** — **Elec
 
 ## 📥 Tải bản dựng sẵn (không cần cài đặt)
 
-Mọi bản phát hành ở [Releases](https://github.com/zingky/kull-aegisub-renderer/releases/tag/v1.0.0). Có 2 lựa chọn:
+Mọi bản phát hành ở [Releases](https://github.com/zingky/kull-aegisub-renderer/releases/tag/v2.0.0). Có 2 lựa chọn:
 
 | Bản | Dung lượng | Mở app | Ghi chú |
 |---|---|---|---|
-| **[ZIP - win-x64](https://github.com/zingky/kull-aegisub-renderer/releases/download/v1.0.0/KullAegisubRenderer-1.0.0-win-x64.zip)** ⭐ | ~191 MB | **~0.4 giây** | Nhanh nhất — giải nén 1 lần rồi chạy |
-| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v1.0.0/KullAegisubRenderer-1.0.0-portable.exe)** | ~129 MB | 6-12 giây | 1 file duy nhất, tiện mang theo |
+| **[ZIP - win-x64](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.0/KullAegisubRenderer-2.0.0-win-x64.zip)** ⭐ | ~194 MB | **~0.4 giây** | Nhanh nhất — giải nén 1 lần rồi chạy |
+| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.0/KullAegisubRenderer-2.0.0-portable.exe)** | ~131 MB | 6-12 giây | 1 file duy nhất, tiện mang theo |
 
 ### Cách dùng bản ZIP (khuyến nghị)
 
-1. Tải `KullAegisubRenderer-1.0.0-win-x64.zip` → chuột phải → **Extract All…** ra thư mục bất kỳ (VD `D:\KullAegisubRenderer`).
+1. Tải `KullAegisubRenderer-2.0.0-win-x64.zip` → chuột phải → **Extract All…** ra thư mục bất kỳ (VD `D:\KullAegisubRenderer`).
 2. Vào thư mục vừa giải nén → chạy **`Kull Aegisub Renderer.exe`**.
 3. Lần đầu SmartScreen có thể cảnh báo (app chưa ký số) → **More info → Run anyway**. Từ lần sau mở chỉ ~0.4 giây.
 
@@ -40,6 +40,17 @@ Double-click file exe là xong — không cài đặt, không đụng registry, 
 
 ---
 
+## 🆕 Có gì mới ở 2.0
+
+| Tính năng | Chi tiết |
+|---|---|
+| 🎬 **Xem trước trong app** | Chọn video là player hiện ra: play/pause, tiến-lùi **1 khung · 1s · 5s**, timeline thumbnail, **xem trước phụ đề ngay trên khung hình** — kiểm tra đã load đúng video/sub trước khi render |
+| ✂️ **Cắt đoạn A → B** | Đặt mốc A/B bằng nút → render chỉ xuất đúng đoạn đã chọn |
+| ⬇️ **Export clip A→B** | Xuất riêng đoạn A→B **không phụ đề**, **giữ nguyên định dạng gốc** |
+| 🌓 **Fade đầu / cuối** | Bật/tắt + **tuỳ chỉnh thời gian** (mặc định 100 ms). Tự áp đúng đoạn đầu & đoạn cuối thành phẩm, kể cả khi có Intro/Outro |
+
+---
+
 ## ✨ Tính năng
 
 | Nhóm | Chi tiết |
@@ -52,16 +63,17 @@ Double-click file exe là xong — không cài đặt, không đụng registry, 
 | **Ghép Intro/Outro** | Tự động scale + pad theo chuẩn video chính, concat 3 đoạn, đoạn câm được chèn audio tĩnh |
 | **Tiến trình & Log** | Progress % · FPS · tốc độ `×` · **ETA dạng "X giờ X phút X giây"** · log thống kê mỗi 5% (frame/fps/bitrate/dung lượng) · **Copy toàn bộ log** |
 | **Ngôn ngữ** | **Nút VI / EN trên header** — đổi ngay toàn bộ giao diện *và* log của engine, ghi nhớ lựa chọn |
-| **UI** | Gọn trong 1 cửa sổ 1300×860, không scroll trang, nhẹ & mở nhanh, Error Boundary chống màn trắng |
+| **UI** | Gọn trong 1 cửa sổ 1600×900, không scroll trang, nhẹ & mở nhanh, Error Boundary chống màn trắng |
 
 ---
 
 ## 🖱️ Cách sử dụng
 
-1. **Mục 1 · File Nguồn**: kéo thả **Video chính** + **File Subtitle**. Muốn ghép đầu/cuối → tick **☑ Ghép Intro/Outro** rồi thả file vào 2 ô Intro/Outro.
-2. **Mục 2 · Engine & Phần cứng**: để mặc định (`VSFilterMod.dll` + `Tự động`) nếu không rõ.
-3. **Mục 3 · Chất Lượng Render**: *"Giữ nguyên gốc"* = file xuất gần như giống hệt nguồn, chỉ khác là đã có sub.
-4. **Mục 4 · Output & Điều Khiển**: chọn thư mục lưu, tên file (mặc định `<tên_gốc>_exported`), **định dạng** → bấm **BẮT ĐẦU RENDER**. Theo dõi progress/ETA/log; xong bấm **Mở thư mục chứa file xuất**. Muốn dừng → **HỦY** (kill cả cây tiến trình FFmpeg).
+1. **Mục 1 · File Nguồn**: kéo thả **Video chính** + **File Subtitle**. Muốn ghép đầu/cuối → tick **☑ Ghép Intro/Outro** rồi thả file vào 2 ô Intro/Outro. Bật **Fade đầu/cuối** nếu cần (nhập thời gian ms, mặc định 100).
+2. **Xem trước** (cột phải, hiện ngay khi chọn video): play/pause, tiến-lùi 1 khung / 1s / 5s, kéo timeline — phụ đề hiện luôn trên khung hình để bạn kiểm tra đã load đúng file chưa. Muốn **cắt đoạn A→B** → đặt mốc **A** và **B** bằng 2 nút trên timeline (mốc lấy theo vị trí đang phát), hoặc bấm **Export clip A→B** để xuất riêng đoạn đó (không phụ đề, giữ định dạng gốc).
+3. **Mục 2 · Engine & Phần cứng**: để mặc định (`VSFilterMod.dll` + `Tự động`) nếu không rõ.
+4. **Mục 3 · Chất Lượng Render**: *"Giữ nguyên gốc"* = file xuất gần như giống hệt nguồn, chỉ khác là đã có sub.
+5. **Mục 4 · Output & Điều Khiển**: chọn thư mục lưu, tên file (mặc định `<tên_gốc>_exported`), **định dạng** → bấm **BẮT ĐẦU RENDER**. Theo dõi progress/ETA/log; xong bấm **Mở thư mục chứa file xuất**. Muốn dừng → **HỦY** (kill cả cây tiến trình FFmpeg).
 
 ---
 
@@ -80,7 +92,7 @@ npm run dist         # → release/KullAegisubRenderer-<version>-portable.exe  (
 ### Cập nhật nội dung Release
 
 ```bash
-node scripts/setReleaseNotes.js docs/release-notes-v1.0.0.md v1.0.0
+node scripts/setReleaseNotes.js docs/release-notes-v2.0.0.md v2.0.0
 ```
 
 > ⚠️ **Đừng dùng PowerShell để ghi release notes.** PowerShell 5 đọc file `.ps1` không BOM theo bảng mã ANSI (CP1252) nên tiếng Việt bị hỏng ngay trước khi gửi lên GitHub → release hiển thị dạng `ghĂ©p cá»©ng phá»¥ Ä‘á»‹`. Script Node ở trên đọc/ghi UTF-8 chuẩn, sau khi ghi còn **tự GET lại và so hash** để chắc chắn nội dung khớp file gốc.
@@ -93,6 +105,7 @@ node scripts/setReleaseNotes.js docs/release-notes-v1.0.0.md v1.0.0
 npm run test:e2e      # tạo video mẫu + render thật (libass + ghép outro) bằng bin/ffmpeg.exe
 npm run test:repro    # hồi quy: chọn file không được làm crash UI (jsdom + bundle thật)
 npm run test:i18n     # song ngữ: parity từ điển + nút VI/EN đổi UI + lưu localStorage
+npm run test:trim     # render thật: cắt A→B, fade đầu/cuối (đo luminance), export clip A→B
 node scripts/checkRows.js       # cấu trúc layout mục 2 (nhóm nút theo hàng)
 node scripts/checkQuality.js    # cấu trúc mục 3 + console log + nút không còn hiệu ứng nặng
 node scripts/test-vsfilter.js   # render thật qua AviSynth+ (auto-swap VSFilterMod → VSFilter)

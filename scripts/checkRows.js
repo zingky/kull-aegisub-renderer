@@ -9,9 +9,9 @@ const { JSDOM, VirtualConsole } = require('jsdom')
 const fs = require('fs')
 const path = require('path')
 
-const assetsDir = path.join(__dirname, '..', 'dist', 'assets')
-const jsBundle = fs.readdirSync(assetsDir).find((f) => f.endsWith('.js') && !f.endsWith('.map'))
-const bundleSrc = fs.readFileSync(path.join(assetsDir, jsBundle), 'utf8')
+const { entryBundle, runnableBundle } = require('./_bundle')
+const jsBundle = entryBundle().f
+const bundleSrc = runnableBundle()
 console.log('Bundle:', jsBundle)
 
 const vc = new VirtualConsole()
@@ -51,8 +51,7 @@ global.window = w
 
 async function main() {
   // Shim import.meta.url cho jsdom (bundle vite dùng URL tương đối của asset)
-  w.eval('var import_meta = { url: "file:///C:/app/index.html" };')
-  w.eval(bundleSrc.replace(/import\.meta\.url/g, 'import_meta.url'))
+  w.eval(bundleSrc)
   await new Promise((r) => setTimeout(r, 800))
 
   // Tìm label chứa text chính xác (tránh div tổ tiên cũng chứa text)
