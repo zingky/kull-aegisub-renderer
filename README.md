@@ -20,7 +20,7 @@ Mọi bản phát hành ở [Releases](https://github.com/zingky/kull-aegisub-re
 | Bản | Dung lượng | Mở app | Ghi chú |
 |---|---|---|---|
 | **[ZIP - win-x64](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.0/KullAegisubRenderer-2.0.0-win-x64.zip)** ⭐ | ~194 MB | **~0.4 giây** | Nhanh nhất — giải nén 1 lần rồi chạy |
-| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.0/KullAegisubRenderer-2.0.0-portable.exe)** | ~131 MB | 6-12 giây | 1 file duy nhất, tiện mang theo |
+| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.0/KullAegisubRenderer-2.0.0-portable.exe)** | ~130 MB | 6-12 giây | 1 file duy nhất, tiện mang theo |
 
 ### Cách dùng bản ZIP (khuyến nghị)
 

@@ -20,7 +20,7 @@ All builds on [Releases](https://github.com/zingky/kull-aegisub-renderer/release
 | Build | Size | Startup | Notes |
 |---|---|---|---|
 | **[ZIP - win-x64](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.0/KullAegisubRenderer-2.0.0-win-x64.zip)** ⭐ | ~194 MB | **~0.4 s** | Fastest — extract once, then run |
-| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.0/KullAegisubRenderer-2.0.0-portable.exe)** | ~131 MB | 6-12 s | Single file, easy to carry around |
+| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.0/KullAegisubRenderer-2.0.0-portable.exe)** | ~130 MB | 6-12 s | Single file, easy to carry around |
 
 ### How to use the ZIP build (recommended)
 
