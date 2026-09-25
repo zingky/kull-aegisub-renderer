@@ -197,8 +197,7 @@ export default function App() {
         hardware,
         quality,
         custom,
-        // Trim A→B do VideoPreview quản lý (qua window.__trimState)
-        trim: (window.__trimState && window.__trimState.enabled) ? window.__trimState : { enabled: false },
+        // (A→B đã tách khỏi Render — chỉ nút "Xuất clip" dùng nó, không cắt chung khi render hardsub)
         // Fade đầu/cuối — UI nhập ms, engine nhận giây (0.05–3s)
         fades: { enabled: fadeEnabled, duration: Math.max(50, Math.min(3000, Number(fadeMs) || 100)) / 1000 },
         // Ngôn ngữ UI → engine ghi log đúng ngôn ngữ đã chọn
@@ -292,8 +291,9 @@ export default function App() {
         </div>
 
           {/* Cột phải: preview + chất lượng + output */}
-        <div className="min-h-0 overflow-y-auto space-y-3 pr-0.5 min-w-0">
+        <div className="min-h-0 flex flex-col gap-3 min-w-0">
           {files.main && (
+            <div className="shrink-0">
             <VideoPreview
               videoPath={files.main.path}
               subPath={files.subtitle?.path || null}
@@ -304,7 +304,10 @@ export default function App() {
               lang={lang}
               t={t}
             />
+            </div>
           )}
+          {/* Khối thiết lập render cuộn riêng — preview không đẩy phần này xuống */}
+          <div className="min-h-0 overflow-y-auto space-y-3 pr-0.5 flex flex-col">
           <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-3">
             <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">{t('sec3.title')}</h2>
             <QualitySelect value={quality} onChange={setQuality} custom={custom} onCustomChange={setCustom} t={t} />
@@ -331,6 +334,7 @@ export default function App() {
             <div className="mt-2">
               <ConsoleLog logs={logs} embedded lang={lang} t={t} />
             </div>
+          </div>
           </div>
         </div>
       </main>

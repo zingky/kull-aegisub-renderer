@@ -2,8 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
   Play, Pause, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight,
-  SkipBack, SkipForward, Download,
+  SkipBack, SkipForward, Download, Plus, X,
 } from 'lucide-react'
+
+// Đường dẫn file → URL an toàn (mã hoá space/#/?... — fix preview màn hình đen)
+const fileUrl = (p) => 'file:///' + String(p).replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/')
 
 /**
  * VideoPreview — Khung preview hardsub + Trim A→B (v2.0)
@@ -21,6 +24,7 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
   const [duration, setDuration] = useState(meta?.duration || 0)
   const [fps, setFps] = useState(meta?.fps || 24)
   const [trim, setTrim] = useState({ start: 0, end: meta?.duration || 0 })
+  const [clips, setClips] = useState([]) // nhiều cặp A→B để xuất nhiều clip trong 1 lần
   const [thumbs, setThumbs] = useState([])
   const [jassubState, setJassubState] = useState('off')
   const [videoError, setVideoError] = useState(false)
@@ -38,6 +42,7 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
     setFps(meta?.fps || 24)
     setCur(0)
     setVideoError(false)
+    setClips([])
   }, [videoPath, meta?.duration, meta?.fps])
 
   // Thumbnail timeline
@@ -50,7 +55,7 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
     window.renderAPI.extractThumbs(videoPath).then((res) => {
       if (canceled || !res?.thumbs?.length) return
       thumbsDirRef.current = res.dir
-      setThumbs(res.thumbs.map((x) => ({ t: x.t, url: `file:///${String(x.file).replace(/\\/g, '/')}` })))
+      setThumbs(res.thumbs.map((x) => ({ t: x.t, url: fileUrl(x.file) })))
     }).catch(() => {})
     return () => { canceled = true }
   }, [videoPath])
@@ -151,27 +156,34 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
   }
   const onTimelineClick = (e) => seek(timeFromEvent(e))
 
-  // Export clip A→B (giữ định dạng gốc)
-  const exportClip = () => {
-    if (!window.renderAPI?.startTrim) return
-    const out = String(outputPath || '').replace(/\.[^.]+$/, '') || 'clip'
-    const srcExt = (String(videoPath).match(/\.([^.\\/:*?"<>|]+)$/) || [])[1] || 'mp4'
-    window.renderAPI.startTrim({
-      mainVideo: videoPath,
-      outputPath: `${out}_trim.${srcExt.toLowerCase()}`,
-      trim: { start: trim.start, end: trim.end },
-      lang,
-    })
+  // ── Nhiều cặp A→B: thêm / xóa / xuất nhiều clip trong 1 lần ──
+  // A→B CHỈ phục vụ nút "Xuất clip" — KHÔNG nối vào Render hardsub nữa (tách bạch)
+  const addClip = () => {
+    if (trim.end - trim.start < 0.1) return
+    setClips((p) => [...p, { id: Date.now() + p.length, start: trim.start, end: trim.end }])
+  }
+  const removeClip = (id) => setClips((p) => p.filter((c) => c.id !== id))
+
+  const exportClips = async () => {
+    if (!window.renderAPI?.startTrim || clips.length === 0) return
+    const base = String(outputPath || '').replace(/\.[^.]+$/, '') || 'clip'
+    const srcExt = (String(videoPath).match(/\.([^\\.\\/:*?"<>|]+)$/) || [])[1] || 'mp4'
+    for (let i = 0; i < clips.length; i++) {
+      try {
+        await window.renderAPI.startTrim({
+          mainVideo: videoPath,
+          outputPath: `${base}_clip${i + 1}.${srcExt.toLowerCase()}`,
+          trim: { start: clips[i].start, end: clips[i].end },
+          lang,
+        })
+      } catch (e) {
+        break // lỗi giữa chừng → dừng, các clip đã xuất vẫn giữ nguyên
+      }
+    }
   }
 
   const inTrim = cur >= trim.start && cur <= trim.end
   const pct = (s) => (duration > 0 ? (s / duration) * 100 : 0)
-
-  // Đồng bộ state trim ra toàn cục (App.jsx đọc khi bấm BẮT ĐẦU RENDER)
-  const trimActive = trim.start > 0.05 || (duration > 0 && trim.end < duration - 0.05)
-  useEffect(() => {
-    window.__trimState = { enabled: trimActive, start: trim.start, end: trim.end }
-  }, [trimActive, trim.start, trim.end])
 
   return (
     <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-3 space-y-2">
@@ -181,10 +193,12 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
         {jassubState === 'fail' && <span className="ml-2 normal-case text-[10px] text-amber-400">{t('pv.assFail')}</span>}
       </h2>
 
-      <div className="relative bg-black rounded-lg overflow-hidden" style={{ aspectRatio: '16/9', maxHeight: 320 }}>
+      {/* Khung video cố định wysokości — không đẩy phần Render xuống dưới */}
+      <div className="relative bg-black rounded-lg overflow-hidden shrink-0" style={{ height: 236 }}>
         <video
           ref={videoRef}
-          src={videoPath ? `file:///${String(videoPath).replace(/\\/g, '/')}` : undefined}
+          src={videoPath ? fileUrl(videoPath) : undefined}
+          preload="metadata"
           className="w-full h-full object-contain"
           onError={() => setVideoError(true)}
           onClick={togglePlay}
@@ -225,6 +239,14 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
             <img key={i} src={x.url} alt="" className="h-full object-cover flex-1 min-w-0" draggable="false" />
           ))}
         </div>
+        {/* Vùng các clip A→B đã thêm (tím) */}
+        {clips.map((c) => (
+          <div
+            key={c.id}
+            className="absolute top-0 bottom-0 bg-violet-500/25 border-x border-violet-400 pointer-events-none"
+            style={{ left: `${pct(c.start)}%`, width: `${Math.max(0.5, pct(c.end) - pct(c.start))}%` }}
+          />
+        ))}
         <div
           className="absolute top-0 bottom-0 bg-emerald-400/20 border-x-2 border-emerald-400 pointer-events-none"
           style={{ left: `${pct(trim.start)}%`, width: `${pct(trim.end) - pct(trim.start)}%` }}
@@ -250,19 +272,41 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
         </button>
         <span className="font-mono text-sky-300">{fmt(trim.end)}</span>
         <span className="text-slate-500">({(trim.end - trim.start).toFixed(1)}s)</span>
-        {trimActive && (
-          <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
-            {t('pv.trimOn')}
-          </span>
-        )}
         <button
-          onClick={exportClip}
-          disabled={status === 'running'}
+          onClick={addClip}
+          className="flex items-center gap-1 px-2 py-1 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/30 font-bold"
+          title={t('pv.clipHint')}
+        >
+          <Plus className="w-3.5 h-3.5" /> {t('pv.addClip')}
+        </button>
+        <button
+          onClick={exportClips}
+          disabled={status === 'running' || clips.length === 0}
           className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white font-bold"
           title={t('pv.exportTip')}
         >
-          <Download className="w-3.5 h-3.5" /> {t('pv.exportClip')}
+          <Download className="w-3.5 h-3.5" />{' '}
+          {clips.length ? t('pv.exportN', { n: clips.length }) : t('pv.exportClip')}
         </button>
+      </div>
+
+      {/* Danh sách clip A→B đã thêm (xuất nhiều clip trong 1 lần) */}
+      <div className="flex items-center gap-1.5 flex-wrap text-[11px]">
+        {clips.length === 0 ? (
+          <span className="text-slate-500">{t('pv.noClip')}</span>
+        ) : (
+          clips.map((c, i) => (
+            <span
+              key={c.id}
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-300 border border-violet-500/40 font-mono"
+            >
+              #{i + 1} {fmt(c.start)} → {fmt(c.end)}
+              <button onClick={() => removeClip(c.id)} className="text-violet-400 hover:text-red-300" title={t('pv.removeClip')}>
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))
+        )}
       </div>
     </div>
   )
