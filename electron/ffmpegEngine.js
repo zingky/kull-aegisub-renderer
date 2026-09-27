@@ -90,9 +90,15 @@ const RE_FPS = /fps=\s*([\d.]+)/
 const RE_SPEED = /speed=\s*([\d.]+(?:\.\d+)?)x/
 const RE_FRAME = /frame=\s*(\d+)/
 const RE_BITRATE = /bitrate=\s*([\d.]+)(k|M)bits\/s/
-const RE_SIZE = /size=\s*(\d+)(k|M|G)?B/i
+// FFmpeg >= 5 in tiền tố IEC nhị phân: 439KiB / 12MiB / 1.4GiB (bản cũ: 439kB / 12MB).
+// Regex cũ /size=\s*(\d+)(k|M|G)?B/ KHÔNG khớp "KiB" → sizeKB=null → log mất trường "dung lượng".
+// Nhóm `i?` là tuỳ chọn nên khớp cả hai kiểu; `(\d+(?:\.\d+)?)` chịu được số thập phân.
+const RE_SIZE = /size=\s*(\d+(?:\.\d+)?)\s*([kKmMgG])?i?[bB]/
+const SZ_MULT = { k: 1, m: 1024, g: 1024 * 1024 }
 
-function parseProgressLine(line, total, totalFrames) {
+// `elapsed` = số giây thực đã trôi qua kể từ lúc FFmpeg bắt đầu chạy (xem runRenderAttempt).
+// Dùng để tính tốc độ TRUNG BÌNH → ETA ổn định. Bỏ trống/null thì ETA lùi về `speed` của ffmpeg.
+function parseProgressLine(line, total, totalFrames, elapsed) {
   const m = line.match(RE_TIME)
   if (!m) return null
   const secs = +m[1] * 3600 + +m[2] * 60 + parseFloat(m[3])
@@ -113,19 +119,24 @@ function parseProgressLine(line, total, totalFrames) {
   if (bm) bitrate = parseFloat(bm[1]) * (bm[2] === 'M' ? 1000 : 1)
   const szm = line.match(RE_SIZE)
   if (szm) {
-    const mult = szm[2] ? { k: 1, m: 1024, g: 1024 * 1024 }[szm[2].toLowerCase()] : 1
+    const mult = szm[2] ? SZ_MULT[szm[2].toLowerCase()] : 1
     sizeKB = Math.round(parseFloat(szm[1]) * mult)
   }
   const remaining = Math.max(0, total - secs)
   // ETA = thời gian THỰC còn lại:
-  //  • speed (x) = số giây video xử lý được mỗi 1 giây thực → eta = remaining / speed ✅
-  //  • ffmpeg không in speed → dùng fps với TỔNG SỐ FRAME đầu ra (totalFrames).
-  //  • TUYỆT ĐỐI không dùng remaining/fps: sai đơn vị (fps ~250 ⇒ ETA "1 giây"
-  //    dù còn vài phút → đây chính là lỗi ETA hiển thị sai trước đây).
-  if (speed && speed > 0) eta = remaining / speed
+  //  Ưu tiên (1) tốc độ TRUNG BÌNH = secs / elapsed. Ổn định, không nhảy loạn.
+  //  `speed` của ffmpeg là cửa sổ NGẮN → dao động mạnh (2.56× rồi 0.32×) làm ETA
+  //  nhảy từ 1min28s sang 6min5s rồi về 1min4s. avgSpeed là hằng số thật của cả render.
+  //  (2) speed tức thời khi chưa đủ mốc thời gian (elapsed <= 2s) hoặc speed thiếu.
+  //  (3) fps với TỔNG SỐ FRAME đầu ra (totalFrames) khi ffmpeg không in speed.
+  //  TUYỆT ĐỐI không dùng remaining/fps: sai đơn vị (fps ~250 ⇒ ETA "1 giây"
+  //  dù còn vài phút → đây chính là lỗi ETA hiển thị sai trước đây).
+  const avgSpeed = elapsed > 2 && secs > 0 ? secs / elapsed : null
+  if (avgSpeed > 0) eta = remaining / avgSpeed
+  else if (speed && speed > 0) eta = remaining / speed
   else if (fps && fps > 0 && frame != null && totalFrames > 0) eta = Math.max(0, totalFrames - frame) / fps
   const timeStr = `${m[1]}:${m[2]}:${m[3]}`
-  return { progress, fps, speed, eta, frame, bitrate, sizeKB, time: timeStr }
+  return { progress, fps, speed, avgSpeed, eta, frame, bitrate, sizeKB, time: timeStr }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -580,6 +591,30 @@ function formatDuration(secs) {
   return [h, m, s].map((v) => String(v).padStart(2, '0')).join(':')
 }
 
+/**
+ * Thời gian thực đã mất khi render (wall-clock), dạng "9m 51s" / "1h 04m".
+ * KHÔNG dùng nhầm với formatDuration (thời lượng video) — log "Tổng thời lượng 00:03:58"
+ * khiến người dùng tưởng render xong trong 3:58 dù thực tế phải chờ 9m51s.
+ */
+function formatElapsed(secs) {
+  secs = Math.max(0, Math.round(secs || 0))
+  if (secs < 60) return `${secs}s`
+  const m = Math.floor(secs / 60)
+  const s = String(secs % 60).padStart(2, '0')
+  if (m < 60) return s === '00' ? `${m}m` : `${m}m ${s}s`
+  return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`
+}
+
+// Ghi file output nằm trong thư mục đồng bộ đám mây (OneDrive/Dropbox/Google Drive…) thì
+// tiến trình sync liên tục scan + upload file đang lớn dần → render chậm dần theo tiến độ.
+// Chỉ là gợi ý (không chặn render): trả về tên thư mục nếu trúng, '' nếu không.
+const CLOUD_SYNC_MARKERS = ['onedrive', 'dropbox', 'google drive', 'googledrive', 'icloud', 'nextcloud', 'owncloud', 'pcloud', 'sugarsync', 'mega']
+function detectCloudSync(outputPath) {
+  if (!outputPath) return ''
+  const p = String(outputPath).toLowerCase()
+  return CLOUD_SYNC_MARKERS.find((m) => p.includes(m)) || ''
+}
+
 async function startRender(options, events) {
   const t = makeT(options.lang)
   // Chuỗi thử: render đúng theo lựa chọn của người dùng; nếu AviSynth/VSFilter bị lỗi
@@ -637,6 +672,9 @@ async function runRenderAttempt(options, events) {
       )
     }
     onLog(t('eng.output', { path: options.outputPath }))
+    // Gợi ý (không chặn): output nằm trong thư mục sync đám mây → thường chậm hơn nhiều
+    const cloud = detectCloudSync(options.outputPath)
+    if (cloud) onLog(t('eng.cloudSync', { name: cloud }), 'warn')
   } catch (e) {
     return { kind: 'error', message: e.message, detail: e.stack || '' }
   }
@@ -650,6 +688,9 @@ async function runRenderAttempt(options, events) {
   return new Promise((resolveOutcome) => {
     let stderrBuf = ''
     const lastLines = []
+    // Mốc thời gian CHẠY THẬT (đặt ngay trước spawn, không tính phần probe/lắp ráp lệnh)
+    // → elapsed là wall-clock thực của render, dùng cho ETA ổn định + thời gian đã mất.
+    const startedAt = Date.now()
     const removeAvs = () => {
       if (subPlanTemp) {
         try { fs.unlinkSync(subPlanTemp) } catch (e) {}
@@ -670,7 +711,7 @@ async function runRenderAttempt(options, events) {
         const t = line.trim()
         if (!t) continue
         if (t.includes('frame=') && t.includes('time=')) {
-          const p = parseProgressLine(t, total, totalFrames)
+          const p = parseProgressLine(t, total, totalFrames, (Date.now() - startedAt) / 1000)
           if (p) onProgress(p)
         } else {
           lastLines.push(t)
@@ -694,8 +735,11 @@ async function runRenderAttempt(options, events) {
         onDone({ outputPath: options.outputPath, canceled: true })
         resolveOutcome({ kind: 'canceled' })
       } else if (code === 0) {
-        onLog(t('eng.done', { dur: formatDuration(total) }), 'success')
-        onDone({ outputPath: options.outputPath, duration: total })
+        // Báo CẢ thời lượng video LẪN thời gian thực đã chờ — trước đây chỉ in thời lượng
+        // video khiến "Tổng thời lượng 00:03:58" bị hiểu là render mất 3 phút 58 giây.
+        const elapsed = (Date.now() - startedAt) / 1000
+        onLog(t('eng.done', { dur: formatDuration(total), took: formatElapsed(elapsed) }), 'success')
+        onDone({ outputPath: options.outputPath, duration: total, elapsed })
         resolveOutcome({ kind: 'done' })
       } else {
         resolveOutcome({
@@ -787,6 +831,8 @@ async function exportTrimClip(options, events) {
   if (['.mp4', '.mov', '.m4v'].includes(ext)) args.push('-movflags', '+faststart')
   args.push(options.outputPath)
   onLog(t('eng.output', { path: options.outputPath }))
+  const cloudClip = detectCloudSync(options.outputPath)
+  if (cloudClip) onLog(t('eng.cloudSync', { name: cloudClip }), 'warn')
 
   return new Promise((resolveOutcome) => {
     let child
@@ -797,6 +843,7 @@ async function exportTrimClip(options, events) {
       return resolveOutcome({ kind: 'error' })
     }
     currentChild = child
+    const clipStartedAt = Date.now()
     let last = ''
     child.stderr.on('data', (chunk) => {
       last += chunk.toString('utf8')
@@ -804,7 +851,7 @@ async function exportTrimClip(options, events) {
       last = lines.pop()
       for (const line of lines) {
         if (line.includes('frame=') && line.includes('time=')) {
-          const p = parseProgressLine(line, dur)
+          const p = parseProgressLine(line, dur, 0, (Date.now() - clipStartedAt) / 1000)
           if (p) onProgress(p)
         }
       }
@@ -822,8 +869,9 @@ async function exportTrimClip(options, events) {
         return resolveOutcome({ kind: 'canceled' })
       }
       if (code === 0) {
-        onLog(t('eng.done', { dur: formatDuration(dur) }), 'success')
-        onDone({ outputPath: options.outputPath, duration: dur })
+        const clipElapsed = (Date.now() - clipStartedAt) / 1000
+        onLog(t('eng.done', { dur: formatDuration(dur), took: formatElapsed(clipElapsed) }), 'success')
+        onDone({ outputPath: options.outputPath, duration: dur, elapsed: clipElapsed })
         resolveOutcome({ kind: 'done' })
       } else {
         onError({ message: t('eng.errExit', { code }), detail: last.slice(-800) })
@@ -870,6 +918,8 @@ module.exports = {
   parseProgressLine,
   escapeFilterPath,
   formatDuration,
+  formatElapsed,
+  detectCloudSync,
   qualityArgs,
   cleanupStaleAvs,
   exportTrimClip,

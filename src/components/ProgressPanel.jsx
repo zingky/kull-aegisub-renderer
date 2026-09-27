@@ -2,7 +2,7 @@ import clsx from 'clsx'
 import { Loader2, AlertTriangle, CheckCircle2, Gauge, Timer, Zap } from 'lucide-react'
 import { formatEta } from '../utils/format'
 
-export default function ProgressPanel({ status, progress, outputPath, t }) {
+export default function ProgressPanel({ status, progress, outputPath, elapsed, t }) {
   const pct = Math.round(progress.pct * 10) / 10
 
   if (status === 'running') {
@@ -48,6 +48,12 @@ export default function ProgressPanel({ status, progress, outputPath, t }) {
           <p className="text-slate-400 mt-0.5 break-all">
             {t('pg.outputFile')} {outputPath || t('pg.unknown')}
           </p>
+          {/* Thời gian thực đã chờ — KHÔNG phải thời lượng video (vd: video 3:58 nhưng render mất 9 phút 51 giây) */}
+          {elapsed != null && elapsed > 0 && (
+            <p className="text-slate-400 mt-0.5">
+              {t('pg.took')} <b className="text-slate-200">{formatEta(elapsed, t)}</b>
+            </p>
+          )}
         </div>
       </div>
     )

@@ -46,6 +46,8 @@ export default function App() {
   const [outputFormat, setOutputFormat] = useState('mp4')
   const [status, setStatus] = useState('idle') // idle | running | done | error
   const [progress, setProgress] = useState({ pct: 0, fps: null, speed: null, eta: null })
+  // Thời gian render thực tế (giây) — khác với thời lượng video (duration).
+  const [renderElapsed, setRenderElapsed] = useState(null)
   const [logs, setLogs] = useState([])
   const [binStatus, setBinStatus] = useState(null)
   const [version, setVersion] = useState('')
@@ -117,6 +119,8 @@ export default function App() {
           setStatus('done')
           setProgress((p) => ({ ...p, pct: 100 }))
           setResultPath(d.outputPath)
+          // Thời gian render THỰC (wall-clock) từ main → hiện ở panel kết quả.
+          setRenderElapsed(d.elapsed ?? null)
           addLogRef.current(tRef.current('msg.done'), 'success')
         }
       }),
@@ -231,6 +235,7 @@ export default function App() {
     lastLoggedBucket = -1
     setResultPath('')
     setProgress({ pct: 0, fps: null, speed: null, eta: null })
+    setRenderElapsed(null)
     setStatus('running')
     try {
       await renderAPI.startRender({
@@ -378,7 +383,7 @@ export default function App() {
               lang={lang}
               t={t}
             />
-            <ProgressPanel status={status} progress={progress} outputPath={resultPath} t={t} />
+            <ProgressPanel status={status} progress={progress} outputPath={resultPath} elapsed={renderElapsed} t={t} />
             {/* Console log: giãn HẾT chiều cao còn lại của Cột 2 (bằng chiều cao Cột 1) */}
             <div className="mt-2 pt-2 flex-1 min-h-[120px] flex flex-col">
               <ConsoleLog logs={logs} embedded lang={lang} t={t} />
