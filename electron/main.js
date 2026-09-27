@@ -84,10 +84,10 @@ ipcMain.handle('open-folder', async (_e, dirPath) => {
 })
 
 // ─── IPC: Mở video + phụ đề bằng trình phát ngoài (VLC / MPV / mặc định OS) ───
-// Preview ASS trong app dùng JASSUB (WebAssembly + WebGL trong Chromium): trên
-// một số máy driver GPU không vẽ được OffscreenCanvas → overlay phụ đề đen/đè
-// mất video. VLC/MPV dùng libass native nên hiển thị phụ đề chuẩn 100% như bản
-// render thật. Trả về { ok, player } — player: 'VLC' | 'MPV' | 'default' | null.
+// Preview ASS trong app do FFmpeg render 1 frame PNG (engine đang chọn: AviSynth +
+// VSFilterMod/VSFilter, hoặc libass) rồi phủ lên video — không dùng WebGL/WASM.
+// VLC/MPV dùng libass native nên xem được lúc ĐANG PHÁT, hiển thị chuẩn 100% như
+// bản render thật. Trả về { ok, player } — player: 'VLC' | 'MPV' | 'default' | null.
 ipcMain.handle('open-in-player', async (_e, videoPath, subPath) => {
   if (!videoPath || !fs.existsSync(videoPath)) return { ok: false, player: null }
   try {
