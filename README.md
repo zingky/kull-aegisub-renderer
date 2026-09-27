@@ -44,7 +44,7 @@ Double-click file exe là xong — không cài đặt, không đụng registry, 
 
 | Tính năng | Chi tiết |
 |---|---|
-| 🎬 **Xem trước trong app** | Chọn video là player hiện ra: play/pause, tiến-lùi **1 khung · 1s · 5s**, timeline thumbnail, **xem trước phụ đề ASS live mượt mà** (hỗ trợ cả mã hóa UTF-8 và UTF-16 từ Aegisub Windows, vẽ sub ngay cả khi video đang tạm dừng) — kiểm tra đã load đúng video/sub trước khi render. **Chống màn hình đen**: overlay phụ đề chỉ hiện sau khi vẽ xong frame đầu, quá 8s không tải được sẽ tự động tắt để video luôn hiển thị; **nút CC** bật/tắt tức thì. **Nút mở VLC/MPV** (nếu máy có cài) xem trước bằng libass native — chuẩn 100% như bản render |
+| 🎬 **Xem trước trong app** | Chọn video là player hiện ra: play/pause, tiến-lùi **1 khung · 1s · 5s**, timeline thumbnail, **xem trước phụ đề render ngay trên khung hình** bằng đúng ffmpeg/libass của bản render (hỗ trợ .ass/.ssa/.srt, UTF-8 & UTF-16 từ Aegisub Windows) — **dừng phát hoặc kéo timeline** là frame phụ đề hiện ngay; không dùng WebGL/WASM nên **không bao giờ có màn hình đen**, lỗi cũng chỉ ẩn phụ đề thôi. **Nút CC** bật/tắt tức thì. **Nút mở VLC/MPV** (nếu máy có cài) xem trước lúc đang phát bằng libass native — chuẩn 100% như bản render |
 | ✂️ **Cắt đoạn A → B** | Đặt mốc A/B bằng nút → render chỉ xuất đúng đoạn đã chọn |
 | ⬇️ **Export clip A→B** | Xuất riêng đoạn A→B **không phụ đề**, **giữ nguyên định dạng gốc** |
 | 🌓 **Fade đầu / cuối** | Bật/tắt + **tuỳ chỉnh thời gian** (mặc định 100 ms). Tự áp đúng đoạn đầu & đoạn cuối thành phẩm, kể cả khi có Intro/Outro |
@@ -70,7 +70,7 @@ Double-click file exe là xong — không cài đặt, không đụng registry, 
 ## 🖱️ Cách sử dụng
 
 1. **Mục 1 · File Nguồn**: kéo thả **Video chính** + **File Subtitle**. Muốn ghép đầu/cuối → tick **☑ Ghép Intro/Outro** rồi thả file vào 2 ô Intro/Outro. Bật **Fade đầu/cuối** nếu cần (nhập thời gian ms, mặc định 100).
-2. **Xem trước** (cột phải, hiện ngay khi chọn video): play/pause, tiến-lùi 1 khung / 1s / 5s, kéo timeline — phụ đề hiện luôn trên khung hình để bạn kiểm tra đã load đúng file chưa. Muốn **cắt đoạn A→B** → đặt mốc **A** và **B** bằng 2 nút trên timeline (mốc lấy theo vị trí đang phát), hoặc bấm **Export clip A→B** để xuất riêng đoạn đó (không phụ đề, giữ định dạng gốc).
+2. **Xem trước** (cột phải, hiện ngay khi chọn video): play/pause, tiến-lùi 1 khung / 1s / 5s, kéo timeline — **dừng phát là frame phụ đề hiện ngay trên khung hình** (render bằng ffmpeg/libass đúng chuẩn bản render) để bạn kiểm tra đã load đúng file và mốc thời gian. Muốn **cắt đoạn A→B** → đặt mốc **A** và **B** bằng 2 nút trên timeline (mốc lấy theo vị trí đang phát), hoặc bấm **Export clip A→B** để xuất riêng đoạn đó (không phụ đề, giữ định dạng gốc).
 3. **Mục 2 · Engine & Phần cứng**: để mặc định (`VSFilterMod.dll` + `Tự động`) nếu không rõ.
 4. **Mục 3 · Chất Lượng Render**: *"Giữ nguyên gốc"* = file xuất gần như giống hệt nguồn, chỉ khác là đã có sub.
 5. **Mục 4 · Output & Điều Khiển**: chọn thư mục lưu, tên file (mặc định `<tên_gốc>_exported`), **định dạng** → bấm **BẮT ĐẦU RENDER**. Theo dõi progress/ETA/log; xong bấm **Mở thư mục chứa file xuất**. Muốn dừng → **HỦY** (kill cả cây tiến trình FFmpeg).

@@ -9,7 +9,7 @@ const path = require('path')
 const fs = require('fs')
 const { spawn } = require('child_process')
 const engine = require('./ffmpegEngine')
-const { checkBinaries } = require('./paths')
+const { checkBinaries, ffmpegPath } = require('./paths')
 
 let mainWindow = null
 
@@ -38,6 +38,9 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
+      // Dev (vite server, origin http://) cần tải media từ file:// → tắt webSecurity.
+      // Bản build thường load từ file:// (cùng origin) → giữ true như mặc định.
+      webSecurity: !DEV_URL,
     },
   })
 
@@ -208,6 +211,56 @@ ipcMain.handle('read-file-text', (_e, filePath) => {
     return buf.toString('utf8')
   } catch (e) {
     return null
+  }
+})
+
+// ─── IPC: Render 1 frame phụ đề (ffmpeg + libass) cho preview ───────────────
+// Trả về data URL PNG — dùng ĐÚNG engine libass như bản render hardsub, không
+// phụ thuộc WebGL/WASM (JASSUB) nên không bao giờ gây màn hình đen. Nhiều request
+// song song được (file output theo seq) — renderer tự bỏ kết quả cũ khi seek.
+let previewFrameSeq = 0
+ipcMain.handle('preview-frame', async (_e, opts) => {
+  const videoPath = opts?.videoPath
+  const subPath = opts?.subPath
+  const timeSec = Math.max(0, Number(opts?.timeSec) || 0)
+  if (!videoPath || !fs.existsSync(videoPath)) return { ok: false, error: 'no-video' }
+  if (!subPath || !fs.existsSync(subPath)) return { ok: false, error: 'no-sub' }
+  const seq = ++previewFrameSeq
+  const outDir = path.join(app.getPath('temp'), 'kull-preview-frame')
+  const outFile = path.join(outDir, `frame-${process.pid}-${seq}.png`)
+  try {
+    fs.mkdirSync(outDir, { recursive: true })
+    const filter = `subtitles='${engine.escapeFilterPath(subPath)}'`
+    // -ss trước -i làm ffmpeg dịch timestamp về 0 → PHẢI cộng lại T trước khi đưa
+    // vào subtitles filter (nếu không libass nghĩ đang ở giây 0 → không vẽ cue nào).
+    const t = timeSec.toFixed(3)
+    const args = [
+      '-y', '-v', 'error',
+      '-ss', t,
+      '-i', videoPath,
+      '-frames:v', '1',
+      '-vf', `setpts=PTS+${t}/TB,${filter}`,
+      '-an', outFile,
+    ]
+    await new Promise((resolve, reject) => {
+      const child = spawn(ffmpegPath, args, { windowsHide: true })
+      const timer = setTimeout(() => {
+        try { child.kill() } catch (e) {}
+        reject(new Error('preview-frame timeout'))
+      }, 15000)
+      child.on('error', (err) => { clearTimeout(timer); reject(err) })
+      child.on('close', (code) => {
+        clearTimeout(timer)
+        if (code === 0) resolve()
+        else reject(new Error('ffmpeg exit ' + code))
+      })
+    })
+    const b64 = fs.readFileSync(outFile).toString('base64')
+    return { ok: true, dataUrl: `data:image/png;base64,${b64}`, timeSec }
+  } catch (e) {
+    return { ok: false, error: String(e?.message || e) }
+  } finally {
+    try { fs.unlinkSync(outFile) } catch (e) {}
   }
 })
 

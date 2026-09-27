@@ -44,7 +44,7 @@ Just double-click the exe — no install, no registry changes, delete the file t
 
 | Feature | Details |
 |---|---|
-| 🎬 **Built-in preview** | Pick a video and the player shows up: play/pause, step **1 frame · 1s · 5s**, thumbnail timeline, **smooth live ASS subtitle preview** (supports UTF-8 & UTF-16 from Aegisub Windows, renders even when video is paused) — verify the right video/sub before rendering. **Black-screen protection**: the subtitle overlay only appears after the first frame is drawn, and auto-disables after 8 s if it can't load so the video always stays visible; the **CC button** toggles it instantly. The **external player button** (if VLC/MPV is installed) previews via native libass — 100% match with the final render |
+| 🎬 **Built-in preview** | Pick a video and the player shows up: play/pause, step **1 frame · 1s · 5s**, thumbnail timeline, **subtitle preview rendered right onto the frame** using the exact same ffmpeg/libass as the final render (.ass/.ssa/.srt, UTF-8 & UTF-16 from Aegisub Windows) — **pause or scrub** and the subtitled frame appears instantly; no WebGL/WASM involved, so **no black screen ever** (failures just hide the subtitle). The **CC button** toggles it instantly. The **external player button** (if VLC/MPV is installed) previews playback via native libass — 100% match with the final render |
 | ✂️ **A → B trimming** | Set A/B marks with buttons → render only that range |
 | ⬇️ **Export A→B clip** | Export the A→B range alone, **no subtitles**, **original format kept** |
 | 🌓 **Fade in / out** | Toggle + **custom duration** (default 100 ms). Automatically applies to the first & last segment of the result, Intro/Outro included |
@@ -70,7 +70,7 @@ Just double-click the exe — no install, no registry changes, delete the file t
 ## 🖱️ How to use
 
 1. **Section 1 · Source Files**: drop the **main video** + **subtitle file**. To merge clips, tick **☑ Merge Intro/Outro** then drop the Intro/Outro files. Enable **Fade in/out** if needed (duration in ms, default 100).
-2. **Preview** (right column, appears as soon as a video is picked): play/pause, step 1 frame / 1s / 5s, drag the timeline — subtitles render right on the frame so you can verify the files loaded correctly. To **trim A→B**, set the **A** and **B** marks with the two buttons (taken from the current playback position), or press **Export A→B clip** to export that range alone (no subtitles, original format kept).
+2. **Preview** (right column, appears as soon as a video is picked): play/pause, step 1 frame / 1s / 5s, drag the timeline — **pause and the subtitled frame appears right on screen** (rendered with ffmpeg/libass, identical to the final render) so you can verify the files and timing loaded correctly. To **trim A→B**, set the **A** and **B** marks with the two buttons (taken from the current playback position), or press **Export A→B clip** to export that range alone (no subtitles, original format kept).
 3. **Section 2 · Engine & Hardware**: keep the defaults (`VSFilterMod.dll` + `Auto`) if unsure.
 4. **Section 3 · Render Quality**: *"Keep original"* produces a file nearly identical to the source — only with the subtitles burned in.
 5. **Section 4 · Output & Controls**: pick the output folder, file name (default `<source_name>_exported`), **format** → press **START RENDER**. Watch progress/ETA/logs; when done, press **Open output folder**. To stop, press **CANCEL** (kills the whole FFmpeg process tree).

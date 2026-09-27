@@ -257,6 +257,20 @@ export default function App() {
     }
   }
 
+  // ── Dev-only: nạp cặp video/phụ đề test qua sự kiện tùy chỉnh (QA tự động qua CDP) ──
+  // Không chạy trong bản build thường (import.meta.env.DEV = false → bị loại bỏ).
+  useEffect(() => {
+    if (!import.meta.env.DEV) return undefined
+    const onLoad = (e) => {
+      const d = e.detail || {}
+      if (d.video) handleFile('main', d.video)
+      if (d.sub) handleFile('subtitle', d.sub)
+    }
+    window.addEventListener('kull-test-load', onLoad)
+    return () => window.removeEventListener('kull-test-load', onLoad)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#0b0f19]">
       {/* ── Header gọn 1 dòng ── */}

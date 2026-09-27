@@ -42,6 +42,8 @@ contextBridge.exposeInMainWorld('renderAPI', {
 
   // IPC: đọc text file (preview phụ đề)
   readFileText: (filePath) => ipcRenderer.invoke('read-file-text', filePath),
+  // IPC: render frame phụ đề (ffmpeg + libass) → data URL PNG cho preview
+  renderPreviewFrame: (opts) => ipcRenderer.invoke('preview-frame', opts),
 
   // IPC: tự canh chiều cao cửa sổ cho VỪA KHÍT nội dung Cột 1 (delta px so với hiện tại)
   fitWindowHeight: (delta) => ipcRenderer.invoke('fit-window-height', delta),
