@@ -92,7 +92,7 @@ const RE_FRAME = /frame=\s*(\d+)/
 const RE_BITRATE = /bitrate=\s*([\d.]+)(k|M)bits\/s/
 const RE_SIZE = /size=\s*(\d+)(k|M|G)?B/i
 
-function parseProgressLine(line, total) {
+function parseProgressLine(line, total, totalFrames) {
   const m = line.match(RE_TIME)
   if (!m) return null
   const secs = +m[1] * 3600 + +m[2] * 60 + parseFloat(m[3])
@@ -117,8 +117,13 @@ function parseProgressLine(line, total) {
     sizeKB = Math.round(parseFloat(szm[1]) * mult)
   }
   const remaining = Math.max(0, total - secs)
-  if (fps && fps > 0) eta = remaining / fps
-  else if (speed && speed > 0) eta = remaining / speed
+  // ETA = thời gian THỰC còn lại:
+  //  • speed (x) = số giây video xử lý được mỗi 1 giây thực → eta = remaining / speed ✅
+  //  • ffmpeg không in speed → dùng fps với TỔNG SỐ FRAME đầu ra (totalFrames).
+  //  • TUYỆT ĐỐI không dùng remaining/fps: sai đơn vị (fps ~250 ⇒ ETA "1 giây"
+  //    dù còn vài phút → đây chính là lỗi ETA hiển thị sai trước đây).
+  if (speed && speed > 0) eta = remaining / speed
+  else if (fps && fps > 0 && frame != null && totalFrames > 0) eta = Math.max(0, totalFrames - frame) / fps
   const timeStr = `${m[1]}:${m[2]}:${m[3]}`
   return { progress, fps, speed, eta, frame, bitrate, sizeKB, time: timeStr }
 }
@@ -247,20 +252,36 @@ function qualityArgs(quality, meta, custom) {
 // ─────────────────────────────────────────────────────────────
 // 7. SUBTITLE PLUGIN — VSFilterMod.dll / VSFilter.dll / libass
 //    - VSFilter*.dll cần chạy qua AviSynth (sinh file .avs tạm):
-//        LoadPlugin("bin/VSFilterMod.dll") + DirectShowSource + TextSub
+//        LoadPlugin("bin/VSFilterMod.dll") + DirectShowSource + TextSubMod
+//    - TÊN HÀM khác nhau tuỳ bản build (đã kiểm chứng bằng preflight + render thật):
+//        VSFilterMod.dll (build _VSMOD: sorayuki 5.2.x / Masaiki 5.3.x) → TextSubMod
+//        VSFilter.dll    (xy-VSFilter, VSFilter cổ điển)                → TextSub
+//      Gọi sai tên hàm ⇒ AviSynth báo "there is no function named ..." ⇒ FFmpeg thoát
+//      lỗi ⇒ app lặng lẽ rơi về libass (MẤT hiệu ứng \t, \move, karaoke… của Aegisub).
 //    - Nếu thiếu AviSynth+ hoặc FFmpeg thiếu avisynth demuxer
 //      => cảnh báo và fallback sang libass (vẫn render được).
 //    - libass: filter subtitles nội bộ, path đã escape theo chuẩn Windows.
 // ─────────────────────────────────────────────────────────────
-function createAvsScript(mainVideo, subtitlePath, dllPath, meta) {
+/** Tên hàm TextSub chính của DLL theo bản build (VSFilterMod → TextSubMod). */
+function avsSubFnName(dllPath) {
+  return /vsfiltermod/i.test(path.basename(String(dllPath))) ? 'TextSubMod' : 'TextSub'
+}
+
+/** Tên hàm còn lại — dùng khi DLL không có hàm chính (bản build lạ). */
+function avsSubFnAlt(dllPath) {
+  return avsSubFnName(dllPath) === 'TextSubMod' ? 'TextSub' : 'TextSubMod'
+}
+
+function createAvsScript(mainVideo, subtitlePath, dllPath, meta, fnName) {
   const toFwd = (p) => String(p).replace(/\\/g, '/')
+  const fn = fnName || avsSubFnName(dllPath)
   const lines = ['SetFilterMTMode("DEFAULT_MT_MODE", 2)']
   lines.push(`LoadPlugin("${toFwd(dllPath)}")`)
   // AviSynth+ 3.7.x tách DirectShowSource thành plugin riêng — load kèm nếu có
   const dss = resolveBin('avsplugins/DirectShowSource.dll')
   if (dss) lines.push(`LoadPlugin("${toFwd(dss)}")`)
-  lines.push(`DirectShowSource("${toFwd(mainVideo)}", fps=${meta.fps || 23.976}, convertfps=true)`)
-  lines.push(`TextSub("${toFwd(subtitlePath)}")`)
+  lines.push(`DirectShowSource("${toFwd(mainVideo)}", fps=${meta?.fps || 23.976}, convertfps=true)`)
+  lines.push(`${fn}("${toFwd(subtitlePath)}")`)
   const tmpPath = path.join(os.tmpdir(), `kull_vietsub_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.avs`)
   fs.writeFileSync(tmpPath, lines.join('\r\n'), 'utf8')
   return tmpPath
@@ -288,8 +309,9 @@ function preflightAvs(avsPath) {
  * Subtitle Plan — chọn đường dẫn render phụ đề.
  *  - libass : -vf "subtitles='path.ass'" (FFmpeg native)
  *  - VSFilter.dll / VSFilterMod.dll : sinh script AviSynth (.avs) rồi preflight.
- *    + Ưu tiên đúng DLL đã chọn; nếu DLL đó không đăng ký TextSub (bản DirectShow-only
- *      như VSFilterMod.dll hiện có trong bin), tự thử DLL còn lại.
+ *    + Ưu tiên đúng DLL đã chọn, và ưu tiên đúng tên hàm của bản build
+ *      (VSFilterMod.dll → TextSubMod, VSFilter.dll → TextSub).
+ *    + DLL không nạp được / không có hàm TextSub(Mod) → tự thử DLL còn lại.
  *    + Thiếu AviSynth core (bundled/system) hoặc FFmpeg thiếu avisynth
  *      => fallback libass + log rõ ràng.
  */
@@ -303,19 +325,24 @@ async function buildSubtitlePlan(engine, subtitlePath, mainVideo, meta, lang) {
       for (const dllName of [preferred, other]) {
         const dll = resolveBin(dllName)
         if (!dll) continue
-        const avsPath = createAvsScript(mainVideo, subtitlePath, dll, meta)
-        const ok = await preflightAvs(avsPath)
-        if (ok) {
-          return {
-            type: 'avs',
-            dll,
-            dllName,
-            avsPath,
-            note: dllName === preferred ? null : t('eng.swapNote', { preferred, dll: dllName }),
-            warning: null,
+        // Thử ĐÚNG tên hàm của bản build trước (VSFilterMod → TextSubMod, xy-VSFilter
+        // → TextSub), rồi mới thử tên còn lại (DLL build lạ / plugin cũ).
+        for (const fn of [avsSubFnName(dll), avsSubFnAlt(dll)]) {
+          const avsPath = createAvsScript(mainVideo, subtitlePath, dll, meta, fn)
+          const ok = await preflightAvs(avsPath)
+          if (ok) {
+            return {
+              type: 'avs',
+              dll,
+              dllName,
+              fn,
+              avsPath,
+              note: dllName === preferred ? null : t('eng.swapNote', { preferred, dll: dllName }),
+              warning: null,
+            }
           }
+          try { fs.unlinkSync(avsPath) } catch (e) {}
         }
-        try { fs.unlinkSync(avsPath) } catch (e) {}
       }
       return {
         type: 'libass',
@@ -535,7 +562,7 @@ async function buildRenderCommand(options) {
   if (['.mp4', '.mov', '.m4v'].includes(ext)) args.push('-movflags', '+faststart')
 
   args.push(options.outputPath)
-  return { args, mainMeta, subPlan, enc, qa, durationTotal, hasIntro, hasOutro }
+  return { args, mainMeta, subPlan, enc, qa, durationTotal, fps: FPS, hasIntro, hasOutro }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -589,7 +616,7 @@ async function runRenderAttempt(options, events) {
     onLog(t('eng.mainMeta', { w: cmd.mainMeta.width, h: cmd.mainMeta.height, fps: cmd.mainMeta.fps, br: cmd.mainMeta.bitrateAvg }))
     if (cmd.subPlan.warning) onLog(cmd.subPlan.warning, 'warn')
     if (cmd.subPlan.note) onLog(cmd.subPlan.note, 'info')
-    if (cmd.subPlan.type === 'avs') onLog(t('eng.avsOk', { dll: cmd.subPlan.dllName }), 'success')
+    if (cmd.subPlan.type === 'avs') onLog(t('eng.avsOk', { dll: cmd.subPlan.dllName, fn: cmd.subPlan.fn || 'TextSub' }), 'success')
     else onLog(t('eng.libassOk'))
     onLog(
       t('eng.encoder', {
@@ -615,6 +642,9 @@ async function runRenderAttempt(options, events) {
   }
 
   const total = cmd.durationTotal
+  // Tổng số frame đầu ra — dùng cho ETA dự phòng khi ffmpeg không in `speed=`
+  const outFps = cmd.fps || cmd.mainMeta.fps || 0
+  const totalFrames = total > 0 && outFps > 0 ? Math.round(total * outFps) : 0
   const subPlanTemp = cmd.subPlan.type === 'avs' ? cmd.subPlan.avsPath : null
 
   return new Promise((resolveOutcome) => {
@@ -640,7 +670,7 @@ async function runRenderAttempt(options, events) {
         const t = line.trim()
         if (!t) continue
         if (t.includes('frame=') && t.includes('time=')) {
-          const p = parseProgressLine(t, total)
+          const p = parseProgressLine(t, total, totalFrames)
           if (p) onProgress(p)
         } else {
           lastLines.push(t)
@@ -845,4 +875,8 @@ module.exports = {
   exportTrimClip,
   extractThumbs,
   cleanupThumbs,
+  // Dùng cho preview frame qua AviSynth (main.js) — tránh lặp lại logic sinh .avs
+  createAvsScript,
+  avsSubFnName,
+  avsSubFnAlt,
 }

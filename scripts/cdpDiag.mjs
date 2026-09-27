@@ -11,7 +11,9 @@
  */
 import fs from 'node:fs'
 
-const [port = '9333', waitMs = '14000', video = '', sub = '', shot = '', evalExpr = ''] = process.argv.slice(2)
+const [port = '9333', waitMs = '14000', video = '', sub = '', shot = '', evalExprRaw = ''] = process.argv.slice(2)
+// Cho phép đọc biểu thức eval từ file: truyền "@duong/dan/file.js" (tránh quoting phức tạp)
+const evalExpr = evalExprRaw.startsWith('@') ? fs.readFileSync(evalExprRaw.slice(1), 'utf8') : evalExprRaw
 // An toàn: không bao giờ treo vô hạn (CDP có thể không trả lời screenshot)
 setTimeout(() => { console.error('TIMEOUT 90s → force exit'); process.exit(2) }, 90000)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))

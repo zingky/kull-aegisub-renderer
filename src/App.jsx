@@ -14,7 +14,7 @@ import ConsoleLog from './components/ConsoleLog'
 import VideoPreview from './components/VideoPreview'
 import LangSwitch from './components/LangSwitch'
 import { useLang } from './i18n'
-import { basename, dirname, extname, stripExt, withExt, formatDuration, formatBytes } from './utils/format'
+import { basename, dirname, extname, stripExt, withExt, formatDuration, formatBytes, formatEta } from './utils/format'
 
 const renderAPI = window.renderAPI
 let logId = 0
@@ -100,6 +100,7 @@ export default function App() {
             d.frame != null ? `frame=${d.frame}` : null,
             d.fps != null ? `fps=${d.fps.toFixed(1)}` : null,
             d.speed != null ? `${tRef.current('stat.speed')}=${d.speed.toFixed(2)}×` : null,
+            d.eta != null ? `${tRef.current('pg.eta')} ${formatEta(d.eta, tRef.current)}` : null,
             d.time ? `time=${d.time}` : null,
             d.bitrate != null ? `bitrate=${Math.round(d.bitrate)}kbps` : null,
             d.sizeKB != null ? `${tRef.current('stat.size')}=${formatBytes(d.sizeKB * 1024)}` : null,
@@ -393,6 +394,7 @@ export default function App() {
             subName={files.subtitle ? basename(files.subtitle) : ''}
             meta={metas.main}
             status={status}
+            engine={engine}
             outputPath={outputDir && outputName ? `${outputDir}\\${withExt(outputName, outputFormat)}` : ''}
             lang={lang}
             t={t}

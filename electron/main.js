@@ -9,7 +9,7 @@ const path = require('path')
 const fs = require('fs')
 const { spawn } = require('child_process')
 const engine = require('./ffmpegEngine')
-const { checkBinaries, ffmpegPath } = require('./paths')
+const { checkBinaries, ffmpegPath, resolveBin } = require('./paths')
 
 let mainWindow = null
 
@@ -214,53 +214,116 @@ ipcMain.handle('read-file-text', (_e, filePath) => {
   }
 })
 
-// ─── IPC: Render 1 frame phụ đề (ffmpeg + libass) cho preview ───────────────
-// Trả về data URL PNG — dùng ĐÚNG engine libass như bản render hardsub, không
-// phụ thuộc WebGL/WASM (JASSUB) nên không bao giờ gây màn hình đen. Nhiều request
-// song song được (file output theo seq) — renderer tự bỏ kết quả cũ khi seek.
+// ─── IPC: Render 1 frame phụ đề cho preview ─────────────────────────────────
+// Trả về data URL PNG. CÁCH render phụ thuộc engine người dùng chọn:
+//  • vsfiltermod / vsfilter → AviSynth + VSFilterMod.dll (TextSubMod) / VSFilter.dll
+//    (TextSub) ⇒ preview khớp CHÍNH XÁC bản render (hiệu ứng \t, \move, karaoke…).
+//    Khởi tạo DirectShowSource tốn ~2s/frame nhưng đúng engine.
+//  • libass (hoặc AviSynth lỗi/thiếu plugin) → -vf subtitles + setpts.
+// Nhiều request song song được (file output theo seq) — renderer tự bỏ kết quả cũ khi seek.
 let previewFrameSeq = 0
+const previewFpsCache = new Map() // "path|size|mtime" → fps (DirectShowSource cần fps)
+
+async function previewVideoFps(videoPath) {
+  try {
+    const st = fs.statSync(videoPath)
+    const key = `${videoPath}|${st.size}|${st.mtimeMs}`
+    if (previewFpsCache.has(key)) return previewFpsCache.get(key)
+    const m = await engine.probeMedia(videoPath)
+    const fps = Number(m?.fps) > 0 ? Number(m.fps) : 0
+    if (previewFpsCache.size > 8) previewFpsCache.clear()
+    previewFpsCache.set(key, fps)
+    return fps
+  } catch (e) {
+    return 0
+  }
+}
+
+/** Chạy ffmpeg xuất 1 frame → resolve khi exit 0, reject khi lỗi/timeout */
+function runPreviewFrame(args, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    let child
+    try {
+      child = spawn(ffmpegPath, args, { windowsHide: true })
+    } catch (err) {
+      return reject(err)
+    }
+    const timer = setTimeout(() => {
+      try { child.kill() } catch (e) {}
+      reject(new Error('preview-frame timeout'))
+    }, timeoutMs)
+    child.on('error', (err) => { clearTimeout(timer); reject(err) })
+    child.on('close', (code) => {
+      clearTimeout(timer)
+      if (code === 0) resolve()
+      else reject(new Error('ffmpeg exit ' + code))
+    })
+  })
+}
+
 ipcMain.handle('preview-frame', async (_e, opts) => {
   const videoPath = opts?.videoPath
   const subPath = opts?.subPath
   const timeSec = Math.max(0, Number(opts?.timeSec) || 0)
+  const engineName = opts?.engine === 'vsfilter' ? 'vsfilter' : opts?.engine === 'vsfiltermod' ? 'vsfiltermod' : 'libass'
   if (!videoPath || !fs.existsSync(videoPath)) return { ok: false, error: 'no-video' }
   if (!subPath || !fs.existsSync(subPath)) return { ok: false, error: 'no-sub' }
   const seq = ++previewFrameSeq
   const outDir = path.join(app.getPath('temp'), 'kull-preview-frame')
   const outFile = path.join(outDir, `frame-${process.pid}-${seq}.png`)
+  let avsPath = null
   try {
     fs.mkdirSync(outDir, { recursive: true })
-    const filter = `subtitles='${engine.escapeFilterPath(subPath)}'`
-    // -ss trước -i làm ffmpeg dịch timestamp về 0 → PHẢI cộng lại T trước khi đưa
-    // vào subtitles filter (nếu không libass nghĩ đang ở giây 0 → không vẽ cue nào).
     const t = timeSec.toFixed(3)
-    const args = [
-      '-y', '-v', 'error',
-      '-ss', t,
-      '-i', videoPath,
-      '-frames:v', '1',
-      '-vf', `setpts=PTS+${t}/TB,${filter}`,
-      '-an', outFile,
-    ]
-    await new Promise((resolve, reject) => {
-      const child = spawn(ffmpegPath, args, { windowsHide: true })
-      const timer = setTimeout(() => {
-        try { child.kill() } catch (e) {}
-        reject(new Error('preview-frame timeout'))
-      }, 15000)
-      child.on('error', (err) => { clearTimeout(timer); reject(err) })
-      child.on('close', (code) => {
-        clearTimeout(timer)
-        if (code === 0) resolve()
-        else reject(new Error('ffmpeg exit ' + code))
-      })
-    })
+
+    // 1) AviSynth + VSFilter* (đúng engine đang chọn) — timestamp do script tự sinh
+    //    theo số frame nên KHÔNG cần bù setpts như libass.
+    if (engineName !== 'libass') {
+      const dllName = engineName === 'vsfilter' ? 'VSFilter.dll' : 'VSFilterMod.dll'
+      const dll = resolveBin(dllName)
+      if (dll) {
+        const fps = await previewVideoFps(videoPath)
+        try {
+          avsPath = engine.createAvsScript(videoPath, subPath, dll, { fps: fps || 23.976 })
+          await runPreviewFrame(
+            ['-y', '-v', 'error', '-ss', t, '-i', avsPath, '-frames:v', '1', '-an', outFile],
+            30000
+          )
+          const b64 = fs.readFileSync(outFile).toString('base64')
+          return {
+            ok: true,
+            dataUrl: `data:image/png;base64,${b64}`,
+            timeSec,
+            engine: engineName,
+            fn: engine.avsSubFnName(dll),
+          }
+        } catch (e) {
+          // AviSynth/VSFilter lỗi (thiếu core, DLL hỏng…) → thử tiếp bằng libass bên dưới
+        }
+      }
+    }
+
+    // 2) libass — -ss trước -i làm ffmpeg dịch timestamp về 0 → PHẢI cộng lại T trước khi
+    //    đưa vào subtitles filter (nếu không libass nghĩ đang ở giây 0 → không vẽ cue nào).
+    const filter = `subtitles='${engine.escapeFilterPath(subPath)}'`
+    await runPreviewFrame(
+      [
+        '-y', '-v', 'error',
+        '-ss', t,
+        '-i', videoPath,
+        '-frames:v', '1',
+        '-vf', `setpts=PTS+${t}/TB,${filter}`,
+        '-an', outFile,
+      ],
+      15000
+    )
     const b64 = fs.readFileSync(outFile).toString('base64')
-    return { ok: true, dataUrl: `data:image/png;base64,${b64}`, timeSec }
+    return { ok: true, dataUrl: `data:image/png;base64,${b64}`, timeSec, engine: 'libass' }
   } catch (e) {
     return { ok: false, error: String(e?.message || e) }
   } finally {
     try { fs.unlinkSync(outFile) } catch (e) {}
+    if (avsPath) { try { fs.unlinkSync(avsPath) } catch (e) {} }
   }
 })
 

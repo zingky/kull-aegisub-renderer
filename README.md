@@ -15,16 +15,16 @@ App desktop **ghép cứng phụ đề ASS/SRT vào video (Hardsub)** — **Elec
 
 ## 📥 Tải bản dựng sẵn (không cần cài đặt)
 
-Mọi bản phát hành ở [Releases](https://github.com/zingky/kull-aegisub-renderer/releases/tag/v2.0.0). Có 2 lựa chọn:
+Mọi bản phát hành ở [Releases](https://github.com/zingky/kull-aegisub-renderer/releases/tag/v2.0.1). Có 2 lựa chọn:
 
 | Bản | Dung lượng | Mở app | Ghi chú |
 |---|---|---|---|
-| **[ZIP - win-x64](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.0/KullAegisubRenderer-2.0.0-win-x64.zip)** ⭐ | ~194 MB | **~0.4 giây** | Nhanh nhất — giải nén 1 lần rồi chạy |
-| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.0/KullAegisubRenderer-2.0.0-portable.exe)** | ~130 MB | 6-12 giây | 1 file duy nhất, tiện mang theo |
+| **[ZIP - win-x64](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.1/KullAegisubRenderer-2.0.1-win-x64.zip)** ⭐ | ~194 MB | **~0.4 giây** | Nhanh nhất — giải nén 1 lần rồi chạy |
+| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.1/KullAegisubRenderer-2.0.1-portable.exe)** | ~130 MB | 6-12 giây | 1 file duy nhất, tiện mang theo |
 
 ### Cách dùng bản ZIP (khuyến nghị)
 
-1. Tải `KullAegisubRenderer-2.0.0-win-x64.zip` → chuột phải → **Extract All…** ra thư mục bất kỳ (VD `D:\KullAegisubRenderer`).
+1. Tải `KullAegisubRenderer-2.0.1-win-x64.zip` → chuột phải → **Extract All…** ra thư mục bất kỳ (VD `D:\KullAegisubRenderer`).
 2. Vào thư mục vừa giải nén → chạy **`Kull Aegisub Renderer.exe`**.
 3. Lần đầu SmartScreen có thể cảnh báo (app chưa ký số) → **More info → Run anyway**. Từ lần sau mở chỉ ~0.4 giây.
 
@@ -40,11 +40,16 @@ Double-click file exe là xong — không cài đặt, không đụng registry, 
 
 ---
 
+## 🐛 Sửa lỗi ở 2.0.1
+
+- **Hiệu ứng VSFilterMod nay render thật**: `VSFilterMod.dll` đăng ký hàm AviSynth **`TextSubMod`** (không phải `TextSub`) → trước đây app gọi sai tên hàm nên lặng lẽ rơi về `VSFilter.dll`/libass và **mất hiệu ứng** (`\distort`, `\jitter`, `\1img…`). Nay engine chọn đúng hàm theo bản build, và **khung xem trước cũng render bằng đúng engine đã chọn** (badge hiện `ASS live ✓ · TextSubMod`).
+- **ETA chính xác**: tính theo `speed` của ffmpeg thay vì `fps` (trước đây `fps≈230` nên còn 10 phút vẫn báo “1 giây”).
+
 ## 🆕 Có gì mới ở 2.0
 
 | Tính năng | Chi tiết |
 |---|---|
-| 🎬 **Xem trước trong app** | Chọn video là player hiện ra: play/pause, tiến-lùi **1 khung · 1s · 5s**, timeline thumbnail, **xem trước phụ đề render ngay trên khung hình** bằng đúng ffmpeg/libass của bản render (hỗ trợ .ass/.ssa/.srt, UTF-8 & UTF-16 từ Aegisub Windows) — **dừng phát hoặc kéo timeline** là frame phụ đề hiện ngay; không dùng WebGL/WASM nên **không bao giờ có màn hình đen**, lỗi cũng chỉ ẩn phụ đề thôi. **Nút CC** bật/tắt tức thì. **Nút mở VLC/MPV** (nếu máy có cài) xem trước lúc đang phát bằng libass native — chuẩn 100% như bản render |
+| 🎬 **Xem trước trong app** | Chọn video là player hiện ra: play/pause, tiến-lùi **1 khung · 1s · 5s**, timeline thumbnail, **xem trước phụ đề render ngay trên khung hình** bằng **đúng engine bạn chọn** (AviSynth + `TextSubMod`/`TextSub`, hoặc libass) (hỗ trợ .ass/.ssa/.srt, UTF-8 & UTF-16 từ Aegisub Windows) — **dừng phát hoặc kéo timeline** là frame phụ đề hiện ngay; không dùng WebGL/WASM nên **không bao giờ có màn hình đen**, lỗi cũng chỉ ẩn phụ đề thôi. **Nút CC** bật/tắt tức thì. **Nút mở VLC/MPV** (nếu máy có cài) xem trước lúc đang phát bằng libass native — chuẩn 100% như bản render |
 | ✂️ **Cắt đoạn A → B** | Đặt mốc A/B bằng nút → render chỉ xuất đúng đoạn đã chọn |
 | ⬇️ **Export clip A→B** | Xuất riêng đoạn A→B **không phụ đề**, **giữ nguyên định dạng gốc** |
 | 🌓 **Fade đầu / cuối** | Bật/tắt + **tuỳ chỉnh thời gian** (mặc định 100 ms). Tự áp đúng đoạn đầu & đoạn cuối thành phẩm, kể cả khi có Intro/Outro |
@@ -56,7 +61,7 @@ Double-click file exe là xong — không cài đặt, không đụng registry, 
 | Nhóm | Chi tiết |
 |---|---|
 | **4 ô kéo thả** | Video chính ⚠️ · Subtitle `.ass/.srt` ⚠️ · Intro · Outro — hiện tên file, độ phân giải, FPS, thời lượng, dung lượng; Intro/Outro mờ đi khi chưa bật ghép |
-| **Engine phụ đề** | `VSFilterMod.dll` (mặc định) / `VSFilter.dll` / `libass` — **AviSynth+ bundle sẵn**, không cần cài hệ thống; DLL thiếu `TextSub` tự đổi sang DLL còn lại, lỗi runtime tự fallback libass |
+| **Engine phụ đề** | `VSFilterMod.dll` (mặc định) / `VSFilter.dll` / `libass` — **AviSynth+ bundle sẵn**, không cần cài hệ thống; tự gọi đúng hàm theo bản build (VSFilterMod → `TextSubMod`, xy-VSFilter → `TextSub`), DLL lỗi mới đổi DLL còn lại, lỗi runtime tự fallback libass |
 | **Phần cứng** | Tự động (ưu tiên GPU) / NVIDIA NVENC / Intel QSV / AMD AMF / CPU x264-x265 — tự dò encoder, mục không có bị làm mờ |
 | **Chất lượng** | Giữ nguyên gốc (Constrained VBR theo file gốc) / Cao / Cân bằng / Tiết kiệm / Tùy chỉnh (Resolution · FPS · Bitrate) |
 | **Định dạng xuất** | `MP4` (mặc định) · `MKV` · `MOV` · `WebM` · `AVI` |
@@ -92,7 +97,7 @@ npm run dist         # → release/KullAegisubRenderer-<version>-portable.exe  (
 ### Cập nhật nội dung Release
 
 ```bash
-node scripts/setReleaseNotes.js docs/release-notes-v2.0.0.md v2.0.0
+node scripts/setReleaseNotes.js docs/release-notes-v2.0.1.md v2.0.1
 ```
 
 > ⚠️ **Đừng dùng PowerShell để ghi release notes.** PowerShell 5 đọc file `.ps1` không BOM theo bảng mã ANSI (CP1252) nên tiếng Việt bị hỏng ngay trước khi gửi lên GitHub → release hiển thị dạng `ghĂ©p cá»©ng phá»¥ Ä‘á»‹`. Script Node ở trên đọc/ghi UTF-8 chuẩn, sau khi ghi còn **tự GET lại và so hash** để chắc chắn nội dung khớp file gốc.
@@ -141,7 +146,7 @@ Kiểm tra nhanh: `npm run check:bin`
 ```
 electron/   main.js (IPC) · preload.js · ffmpegEngine.js (Core Engine) · i18n.js · paths.js
 src/        App.jsx · i18n.js (từ điển VI/EN) · components/ (8 UI + LangSwitch + ErrorBoundary) · utils/
-scripts/    checkBin · e2eTest · repro-select · checkI18n · checkRows · checkQuality · test-vsfilter · test-avs-dlls · zipRenderTest · afterPackIcon · setReleaseNotes
+scripts/    checkBin · e2eTest · repro-select · checkI18n · checkRows · checkQuality · test-vsfilter · test-vsfm-effects · test-avs-seek · test-avs-dlls · zipRenderTest · afterPackIcon · setReleaseNotes
 bin/        ffmpeg · ffprobe · AviSynth.dll · VSFilter*.dll · avsplugins/
 ```
 

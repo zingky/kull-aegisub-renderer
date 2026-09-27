@@ -14,7 +14,7 @@ const fileUrl = (p) => 'file:///' + String(p).replace(/\\/g, '/').split('/').map
  * Nằm trọn vẹn trong Cột 3 (Xem trước & Cắt đoạn A→B)
  * Preview phụ đề: ffmpeg render frame (libass) — không WebGL/WASM, không màn đen.
  */
-export default function VideoPreview({ videoPath, subPath, subName, meta, status, outputPath, lang, t }) {
+export default function VideoPreview({ videoPath, subPath, subName, meta, status, outputPath, lang, t, engine = 'libass' }) {
   const videoRef = useRef(null)
   const timelineRef = useRef(null)
   const thumbsDirRef = useRef(null)
@@ -31,6 +31,8 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
   // Không canvas/WebGL → không bao giờ che video bằng mảng đen; lỗi → bỏ qua an toàn.
   const [subFrame, setSubFrame] = useState(null)
   const [frameBusy, setFrameBusy] = useState(false)
+  // Engine đã render frame preview (TextSubMod / TextSub / libass) — hiện cạnh "ASS live"
+  const [frameEngine, setFrameEngine] = useState(null)
   const [frameFail, setFrameFail] = useState(false)
   // Bật/tắt preview phụ đề ASS ngay trên UI (nút CC) — dùng khi file ASS nặng
   // hoặc driver GPU gây lỗi để khôi phục video hiển thị bình thường tức thì.
@@ -96,6 +98,7 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
     frameSeqRef.current++
     if (frameTimerRef.current) clearTimeout(frameTimerRef.current)
     setSubFrame(null)
+    setFrameEngine(null)
     setFrameBusy(false)
     setFrameFail(false)
     const enabled =
@@ -111,12 +114,13 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
       const timeSec = Math.max(0, v.currentTime || 0)
       setFrameBusy(true)
       window.renderAPI
-        .renderPreviewFrame({ videoPath, subPath, timeSec })
+        .renderPreviewFrame({ videoPath, subPath, timeSec, engine })
         .then((res) => {
           if (disposed || frameSeqRef.current !== seq) return
           setFrameBusy(false)
           if (res?.ok) {
             setSubFrame(res.dataUrl)
+            setFrameEngine(res.fn || res.engine || null)
             setFrameFail(false)
           } else setFrameFail(true)
         })
@@ -167,7 +171,7 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
         v.removeEventListener('loadedmetadata', request)
       }
     }
-  }, [videoPath, subPath, subsEnabled])
+  }, [videoPath, subPath, subsEnabled, engine])
 
   // Player events + pause khi render
   useEffect(() => {
@@ -357,7 +361,9 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
           <span>{t('pv.title')}</span>
           {frameBusy && <span className="normal-case text-[10px] text-slate-400">{t('pv.rendering')}</span>}
           {!frameBusy && !frameFail && subFrame && !playing && (
-            <span className="normal-case text-[10px] text-emerald-400">ASS live ✓</span>
+            <span className="normal-case text-[10px] text-emerald-400">
+              ASS live ✓{frameEngine ? ` · ${frameEngine}` : ''}
+            </span>
           )}
           {frameFail && <span className="normal-case text-[10px] text-amber-400">{t('pv.assFail')}</span>}
           {playerTip && <span className="normal-case text-[10px] text-sky-300">{playerTip}</span>}

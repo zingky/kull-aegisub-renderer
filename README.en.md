@@ -15,16 +15,16 @@ Desktop app that **burns (hardsubs) ASS/SRT subtitles into video** — **Electro
 
 ## 📥 Prebuilt download (no installation)
 
-All builds on [Releases](https://github.com/zingky/kull-aegisub-renderer/releases/tag/v2.0.0). Two options:
+All builds on [Releases](https://github.com/zingky/kull-aegisub-renderer/releases/tag/v2.0.1). Two options:
 
 | Build | Size | Startup | Notes |
 |---|---|---|---|
-| **[ZIP - win-x64](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.0/KullAegisubRenderer-2.0.0-win-x64.zip)** ⭐ | ~194 MB | **~0.4 s** | Fastest — extract once, then run |
-| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.0/KullAegisubRenderer-2.0.0-portable.exe)** | ~130 MB | 6-12 s | Single file, easy to carry around |
+| **[ZIP - win-x64](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.1/KullAegisubRenderer-2.0.1-win-x64.zip)** ⭐ | ~194 MB | **~0.4 s** | Fastest — extract once, then run |
+| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.1/KullAegisubRenderer-2.0.1-portable.exe)** | ~130 MB | 6-12 s | Single file, easy to carry around |
 
 ### How to use the ZIP build (recommended)
 
-1. Download `KullAegisubRenderer-2.0.0-win-x64.zip` → right-click → **Extract All…** into any folder (e.g. `D:\KullAegisubRenderer`).
+1. Download `KullAegisubRenderer-2.0.1-win-x64.zip` → right-click → **Extract All…** into any folder (e.g. `D:\KullAegisubRenderer`).
 2. Open that folder and run **`Kull Aegisub Renderer.exe`**.
 3. On first launch SmartScreen may warn (unsigned app) → **More info → Run anyway**. Afterwards it opens in ~0.4 s.
 
@@ -40,11 +40,16 @@ Just double-click the exe — no install, no registry changes, delete the file t
 
 ---
 
+## 🐛 Fixed in 2.0.1
+
+- **VSFilterMod effects now actually render**: `VSFilterMod.dll` registers the AviSynth function **`TextSubMod`** (not `TextSub`) → the app used to call the wrong name, silently fell back to `VSFilter.dll`/libass and **lost the effects** (`\distort`, `\jitter`, `\1img…`). The engine now picks the right function per build, and **the in-app preview renders with the selected engine too** (badge shows `ASS live ✓ · TextSubMod`).
+- **Accurate ETA**: computed from ffmpeg's `speed` instead of `fps` (with `fps≈230` it used to say “1 second” even with 10 minutes left).
+
 ## 🆕 What's new in 2.0
 
 | Feature | Details |
 |---|---|
-| 🎬 **Built-in preview** | Pick a video and the player shows up: play/pause, step **1 frame · 1s · 5s**, thumbnail timeline, **subtitle preview rendered right onto the frame** using the exact same ffmpeg/libass as the final render (.ass/.ssa/.srt, UTF-8 & UTF-16 from Aegisub Windows) — **pause or scrub** and the subtitled frame appears instantly; no WebGL/WASM involved, so **no black screen ever** (failures just hide the subtitle). The **CC button** toggles it instantly. The **external player button** (if VLC/MPV is installed) previews playback via native libass — 100% match with the final render |
+| 🎬 **Built-in preview** | Pick a video and the player shows up: play/pause, step **1 frame · 1s · 5s**, thumbnail timeline, **subtitle preview rendered right onto the frame** using **the engine you selected** (AviSynth + `TextSubMod`/`TextSub`, or libass) (.ass/.ssa/.srt, UTF-8 & UTF-16 from Aegisub Windows) — **pause or scrub** and the subtitled frame appears instantly; no WebGL/WASM involved, so **no black screen ever** (failures just hide the subtitle). The **CC button** toggles it instantly. The **external player button** (if VLC/MPV is installed) previews playback via native libass — 100% match with the final render |
 | ✂️ **A → B trimming** | Set A/B marks with buttons → render only that range |
 | ⬇️ **Export A→B clip** | Export the A→B range alone, **no subtitles**, **original format kept** |
 | 🌓 **Fade in / out** | Toggle + **custom duration** (default 100 ms). Automatically applies to the first & last segment of the result, Intro/Outro included |
@@ -56,7 +61,7 @@ Just double-click the exe — no install, no registry changes, delete the file t
 | Group | Details |
 |---|---|
 | **4 drop zones** | Main video ⚠️ · Subtitle `.ass/.srt` ⚠️ · Intro · Outro — shows file name, resolution, FPS, duration, size; Intro/Outro are dimmed until merging is enabled |
-| **Subtitle engine** | `VSFilterMod.dll` (default) / `VSFilter.dll` / `libass` — **AviSynth+ is bundled**, no system install needed; a DLL lacking `TextSub` is auto-swapped to the other one, runtime failures auto-fallback to libass |
+| **Subtitle engine** | `VSFilterMod.dll` (default) / `VSFilter.dll` / `libass` — **AviSynth+ is bundled**, no system install needed; the right AviSynth function is picked per build (VSFilterMod → `TextSubMod`, xy-VSFilter → `TextSub`), a failing DLL is swapped for the other one, runtime failures auto-fallback to libass |
 | **Hardware encoder** | Auto (prefer GPU) / NVIDIA NVENC / Intel QSV / AMD AMF / CPU x264-x265 — encoders are detected, unavailable ones are dimmed |
 | **Quality** | Keep original (Constrained VBR from source) / High / Balanced / Small size / Custom (Resolution · FPS · Bitrate) |
 | **Output format** | `MP4` (default) · `MKV` · `MOV` · `WebM` · `AVI` |
@@ -92,7 +97,7 @@ npm run dist         # → release/KullAegisubRenderer-<version>-portable.exe  (
 ### Updating the Release body
 
 ```bash
-node scripts/setReleaseNotes.js docs/release-notes-v2.0.0.md v2.0.0
+node scripts/setReleaseNotes.js docs/release-notes-v2.0.1.md v2.0.1
 ```
 
 > ⚠️ **Never write release notes with PowerShell.** PowerShell 5 reads a BOM-less `.ps1` as ANSI (CP1252), so non-ASCII text is already corrupted before it reaches GitHub. The Node script above reads/writes proper UTF-8 and then **re-fetches the release and compares hashes** to prove the body matches the source file.
@@ -142,7 +147,7 @@ Quick check: `npm run check:bin`
 ```
 electron/   main.js (IPC) · preload.js · ffmpegEngine.js (core engine) · i18n.js · paths.js
 src/        App.jsx · i18n.js (VI/EN dictionaries) · components/ (8 UI + LangSwitch + ErrorBoundary) · utils/
-scripts/    checkBin · e2eTest · repro-select · checkI18n · checkRows · checkQuality · test-vsfilter · test-avs-dlls · zipRenderTest · afterPackIcon · setReleaseNotes
+scripts/    checkBin · e2eTest · repro-select · checkI18n · checkRows · checkQuality · test-vsfilter · test-vsfm-effects · test-avs-seek · test-avs-dlls · zipRenderTest · afterPackIcon · setReleaseNotes
 bin/        ffmpeg · ffprobe · AviSynth.dll · VSFilter*.dll · avsplugins/
 ```
 
