@@ -41,6 +41,9 @@ contextBridge.exposeInMainWorld('renderAPI', {
   // IPC: đọc text file (preview phụ đề)
   readFileText: (filePath) => ipcRenderer.invoke('read-file-text', filePath),
 
+  // IPC: tự canh chiều cao cửa sổ cho VỪA KHÍT nội dung Cột 1 (delta px so với hiện tại)
+  fitWindowHeight: (delta) => ipcRenderer.invoke('fit-window-height', delta),
+
   // Sự kiện đẩy từ Main Process về UI
   onProgress: (cb) => bind('render:progress', cb),
   onLog: (cb) => bind('render:log', cb),

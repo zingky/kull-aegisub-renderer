@@ -4,7 +4,7 @@
  * main.js — Electron Main Process
  * Khởi tạo cửa sổ, khai báo toàn bộ IPC, điều phối tới Core Engine.
  */
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog, shell, screen } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const engine = require('./ffmpegEngine')
@@ -12,14 +12,20 @@ const { checkBinaries } = require('./paths')
 
 let mainWindow = null
 
+// Kích thước cửa sổ (DIP) — chiều CAO sẽ được renderer canh lại cho vừa khít Cột 1
+const WIN_DEFAULT_W = 1600
+const WIN_DEFAULT_H = 900
+const WIN_MIN_W = 1280
+const WIN_MIN_H = 820
+
 const DEV_URL = process.env.VITE_DEV_SERVER_URL
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1600,
-    height: 900,
-    minWidth: 1280,
-    minHeight: 820,
+    width: WIN_DEFAULT_W,
+    height: WIN_DEFAULT_H,
+    minWidth: WIN_MIN_W,
+    minHeight: WIN_MIN_H,
     title: 'Kull Aegisub Renderer',
     icon: app.isPackaged
       ? path.join(process.resourcesPath, 'icon.ico')
@@ -116,12 +122,57 @@ ipcMain.handle('trim:thumbs', async (_e, videoPath) => engine.extractThumbs(vide
 ipcMain.handle('trim:cleanup-thumbs', (_e, dir) => engine.cleanupThumbs(dir))
 
 // ─── IPC: đọc file phụ đề (cho preview .ass live) ────────────
+// Hỗ trợ tự động nhận diện UTF-8 (có/không BOM) và UTF-16 LE/BE (Aegisub Windows hay lưu UTF-16)
 ipcMain.handle('read-file-text', (_e, filePath) => {
   try {
-    return fs.readFileSync(filePath, 'utf8')
+    const buf = fs.readFileSync(filePath)
+    if (!buf || buf.length === 0) return ''
+    // UTF-8 BOM (EF BB BF)
+    if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) {
+      return buf.subarray(3).toString('utf8')
+    }
+    // UTF-16 LE BOM (FF FE)
+    if (buf.length >= 2 && buf[0] === 0xff && buf[1] === 0xfe) {
+      return buf.subarray(2).toString('utf16le')
+    }
+    // UTF-16 BE BOM (FE FF)
+    if (buf.length >= 2 && buf[0] === 0xfe && buf[1] === 0xff) {
+      const swapped = Buffer.alloc(buf.length - 2)
+      for (let i = 2; i < buf.length - 1; i += 2) {
+        swapped[i - 2] = buf[i + 1]
+        swapped[i - 1] = buf[i]
+      }
+      return swapped.toString('utf16le')
+    }
+    // Heuristic UTF-16 LE không BOM: byte chẵn là 0x00
+    if (buf.length >= 4 && buf[1] === 0x00 && buf[3] === 0x00) {
+      return buf.toString('utf16le')
+    }
+    return buf.toString('utf8')
   } catch (e) {
     return null
   }
+})
+
+// ─── IPC: tự canh chiều cao cửa sổ cho VỪA KHÍT nội dung Cột 1 ─
+// Renderer đo chiều cao thật của nội dung Cột 1 rồi gửi `delta` (px):
+// delta > 0 → nội dung cao hơn khung nhìn (Cột 1 phải cuộn) → nới cửa sổ;
+// delta < 0 → còn dư chỗ → thu cửa sổ lại cho vừa khít.
+// Luôn giữ: bề ngang không đổi, chiều cao ≥ WIN_MIN_H và ≤ vùng làm việc của màn hình.
+ipcMain.handle('fit-window-height', (_e, delta) => {
+  if (!mainWindow || mainWindow.isDestroyed()) return null
+  const d = Math.round(Number(delta) || 0)
+  const b = mainWindow.getBounds()
+  if (!d) return b.height
+  const wa = screen.getDisplayMatching(b).workArea
+  const maxH = Math.max(WIN_MIN_H, wa.y + wa.height - Math.max(b.y, wa.y))
+  const target = Math.min(maxH, Math.max(WIN_MIN_H, b.height + d))
+  if (Math.abs(target - b.height) < 2) return b.height // lệch < 2px → bỏ qua (khỏi rung cửa sổ)
+  const wasResizable = mainWindow.isResizable()
+  if (!wasResizable) mainWindow.setResizable(true) // Windows: cần cho phép đổi kích thước
+  mainWindow.setBounds({ x: b.x, y: b.y, width: b.width, height: target })
+  if (!wasResizable) mainWindow.setResizable(false)
+  return target
 })
 
 // ─── Khởi động app ───────────────────────────────────────────

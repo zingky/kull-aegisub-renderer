@@ -30,53 +30,55 @@ export default function OutputControls({
 
   return (
     <div>
-      {/* Thư mục lưu + tên file + định dạng trên cùng 1 dòng */}
-      <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
-        <div className="min-w-0">
-          <label className="text-[10px] font-semibold text-slate-500">{t('out.dir')}</label>
-          <div className="mt-0.5 flex gap-1.5">
-            <input
-              value={outputDir}
-              onChange={(e) => setOutputDir(e.target.value)}
-              placeholder={t('out.dirPlaceholder')}
-              className="flex-1 min-w-0 rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-[12px] text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
-            />
-            <button
-              onClick={pickDir}
-              className="shrink-0 px-2.5 rounded-md bg-slate-700/60 hover:bg-slate-600 text-slate-200 transition-colors flex items-center gap-1 text-[12px]"
-            >
-              <FolderOpen className="w-3.5 h-3.5" /> {t('out.browse')}
-            </button>
-          </div>
-        </div>
-        <div className="min-w-0">
-          <label className="text-[10px] font-semibold text-slate-500">{t('out.name')}</label>
+      {/* Dòng 1: Thư mục lưu — TRỌN 1 DÒNG riêng, giãn hết bề ngang Cột 2 */}
+      <div className="min-w-0">
+        <label className="block text-[10px] font-semibold text-slate-500 leading-4">{t('out.dir')}</label>
+        <div className="mt-0.5 w-full flex gap-1.5">
           <input
-            value={outputName}
-            onChange={(e) => setOutputName(e.target.value)}
-            placeholder="<tên_gốc>_exported"
-            className="mt-0.5 w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-[12px] text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+            value={outputDir}
+            onChange={(e) => setOutputDir(e.target.value)}
+            placeholder={t('out.dirPlaceholder')}
+            className="flex-1 min-w-0 rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-[12px] text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
           />
+          <button
+            onClick={pickDir}
+            className="shrink-0 px-2.5 rounded-md bg-slate-700/60 hover:bg-slate-600 text-slate-200 transition-colors flex items-center gap-1 text-[12px]"
+          >
+            <FolderOpen className="w-3.5 h-3.5" /> {t('out.browse')}
+          </button>
         </div>
-        <div className="min-w-0">
-          <label className="text-[10px] font-semibold text-slate-500">{t('out.format')}</label>
-          <div className="mt-0.5 flex gap-1">
-            {FORMATS.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setOutputFormat(f.id)}
-                title={t(f.descKey)}
-                className={clsx(
-                  'px-2 py-1 rounded-md border text-[11px] font-bold uppercase tracking-wide',
-                  outputFormat === f.id
-                    ? 'border-amber-400 bg-amber-400/10 text-amber-200'
-                    : 'border-slate-700 bg-slate-800/40 text-slate-400 hover:border-slate-500 hover:text-slate-200'
-                )}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
+      </div>
+
+      {/* Dòng 2: Tên file xuất — TRỌN 1 DÒNG riêng (không còn chung dòng với Thư mục lưu) */}
+      <div className="mt-2 min-w-0">
+        <label className="block text-[10px] font-semibold text-slate-500 leading-4">{t('out.name')}</label>
+        <input
+          value={outputName}
+          onChange={(e) => setOutputName(e.target.value)}
+          placeholder="<tên_gốc>_exported"
+          className="mt-0.5 w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-[12px] text-slate-100 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+        />
+      </div>
+
+      {/* Dòng 3: Định dạng (nhãn dòng riêng) — 5 nút chia đều bề ngang */}
+      <div className="mt-2 min-w-0">
+        <label className="block text-[10px] font-semibold text-slate-500 leading-4">{t('out.format')}</label>
+        <div className="mt-0.5 grid grid-cols-5 gap-1">
+          {FORMATS.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setOutputFormat(f.id)}
+              title={t(f.descKey)}
+              className={clsx(
+                'px-2 py-1 rounded-md border text-[11px] font-bold uppercase tracking-wide text-center',
+                outputFormat === f.id
+                  ? 'border-amber-400 bg-amber-400/10 text-amber-200'
+                  : 'border-slate-700 bg-slate-800/40 text-slate-400 hover:border-slate-500 hover:text-slate-200'
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
       </div>
 

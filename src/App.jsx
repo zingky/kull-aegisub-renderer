@@ -57,6 +57,25 @@ export default function App() {
   }, [])
   addLogRef.current = addLog
 
+  // ── Canh chiều cao cửa sổ theo chiều cao THẬT của Cột 1 ──
+  // col1Ref = khung cuộn của cột 1 · col1InnerRef = nội dung thật (đo chiều cao tự nhiên)
+  const col1Ref = useRef(null)
+  const col1InnerRef = useRef(null)
+  const lastFitRef = useRef(0)
+
+  /** Đo chiều cao nội dung Cột 1 → xin Main Process nới/thu chiều cao cửa sổ cho VỪA KHÍT. */
+  const fitWindowToCol1 = useCallback(() => {
+    const box = col1Ref.current
+    const inner = col1InnerRef.current
+    if (!box || !inner || typeof window.renderAPI?.fitWindowHeight !== 'function') return
+    const delta = Math.ceil(inner.getBoundingClientRect().height) - box.clientHeight
+    // delta > 0: nội dung cao hơn khung nhìn → cửa sổ phải cao thêm
+    // delta < 0: khung nhìn còn dư chỗ → thu cửa sổ lại cho vừa khít
+    if (!delta || Math.abs(delta - lastFitRef.current) < 2) return
+    lastFitRef.current = delta
+    window.renderAPI.fitWindowHeight(delta).catch(() => {})
+  }, [])
+
   // ── Khởi tạo: kiểm tra bin, phiên bản, encoder + lắng nghe sự kiện render ──
   useEffect(() => {
     renderAPI.checkBin().then(setBinStatus)
@@ -108,6 +127,33 @@ export default function App() {
     ]
     return () => offs.forEach((o) => o())
   }, [])
+
+  // ── Canh chiều cao cửa sổ cho vừa khít Cột 1 ──
+  //  · chạy 1 lần khi mở app (và mỗi khi nội dung Cột 1 đổi: bật Merge/Fade, thêm file, đổi ngôn ngữ…)
+  //  · khi cửa sổ bị kéo giãn BỀ NGANG thì canh lại (chữ xuống dòng → chiều cao Cột 1 đổi);
+  //    còn nếu chỉ người dùng tự kéo cao/thấp thì giữ nguyên, không giật về.
+  useEffect(() => {
+    const box = col1Ref.current
+    const inner = col1InnerRef.current
+    if (!box || !inner) return
+    let timer = 0
+    const schedule = () => { clearTimeout(timer); timer = setTimeout(fitWindowToCol1, 120) }
+    let lastW = window.innerWidth
+    const onResize = () => {
+      if (Math.abs(window.innerWidth - lastW) < 1) return
+      lastW = window.innerWidth
+      schedule()
+    }
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(schedule) : null
+    if (ro) ro.observe(inner)
+    window.addEventListener('resize', onResize)
+    schedule()
+    return () => {
+      clearTimeout(timer)
+      if (ro) ro.disconnect()
+      window.removeEventListener('resize', onResize)
+    }
+  }, [fitWindowToCol1])
 
   // ── Quản lý file ──
   const handleFile = useCallback(
@@ -252,10 +298,13 @@ export default function App() {
         </div>
       </header>
 
-      {/* ── Body fit 1 màn hình: 2 cột scroll nội bộ ── */}
-      <main className="flex-1 min-h-0 w-full grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-3 p-3">
-        {/* Cột trái: File nguồn (khu 1 + 5) */}
-        <div className="min-h-0 overflow-y-auto space-y-3 pr-0.5">
+      {/* ── Body fit 1 màn hình: 3 cột ── */}
+      <main className="flex-1 min-h-0 w-full grid grid-cols-1 lg:grid-cols-[330px_minmax(360px,420px)_1fr] gap-3 p-3">
+        {/* Cột 1: File nguồn (khu 1) & Cấu hình render (khu 2)
+            → col1Ref = khung cuộn, col1InnerRef = nội dung THẬT của cột
+              (đo chiều cao tự nhiên để canh chiều cao cửa sổ cho vừa khít) */}
+        <div ref={col1Ref} className="min-h-0 overflow-y-auto pr-0.5">
+          <div ref={col1InnerRef} className="space-y-3">
           <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-3 space-y-2">
             <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 flex items-center justify-between">
               <span>{t('sec1.title')}</span>
@@ -288,32 +337,17 @@ export default function App() {
               </span>
             </div>
           )}
+          </div>
         </div>
 
-          {/* Cột phải: preview + chất lượng + output */}
-        <div className="min-h-0 flex flex-col gap-3 min-w-0">
-          {files.main && (
-            <div className="shrink-0">
-            <VideoPreview
-              videoPath={files.main.path}
-              subPath={files.subtitle?.path || null}
-              subName={files.subtitle ? basename(files.subtitle.path) : ''}
-              meta={metas.main}
-              status={status}
-              outputPath={outputDir && outputName ? `${outputDir}\\${withExt(outputName, outputFormat)}` : ''}
-              lang={lang}
-              t={t}
-            />
-            </div>
-          )}
-          {/* Khối thiết lập render cuộn riêng — preview không đẩy phần này xuống */}
-          <div className="min-h-0 overflow-y-auto space-y-3 pr-0.5 flex flex-col">
-          <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-3">
+        {/* Cột 2: Mục 3 (Chất lượng) + Mục 4 (Xuất file) + Console log */}
+        <div className="min-h-0 flex flex-col gap-2.5 overflow-hidden">
+          <div className="shrink-0 rounded-xl border border-slate-800 bg-[#0f1526]/70 p-2.5">
             <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">{t('sec3.title')}</h2>
             <QualitySelect value={quality} onChange={setQuality} custom={custom} onCustomChange={setCustom} t={t} />
           </div>
 
-          <div className="rounded-xl border border-slate-800 bg-[#0f1526]/70 p-3" id="sec4col">
+          <div className="min-h-0 flex-1 rounded-xl border border-slate-800 bg-[#0f1526]/70 p-2.5 flex flex-col" id="sec4col">
             <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">{t('sec4.title')}</h2>
             <OutputControls
               outputDir={outputDir}
@@ -330,12 +364,25 @@ export default function App() {
               t={t}
             />
             <ProgressPanel status={status} progress={progress} outputPath={resultPath} t={t} />
-            {/* Console log nằm gọn dưới mục 4 (trong cột phải) */}
-            <div className="mt-2">
+            {/* Console log: giãn HẾT chiều cao còn lại của Cột 2 (bằng chiều cao Cột 1) */}
+            <div className="mt-2 pt-2 flex-1 min-h-[120px] flex flex-col">
               <ConsoleLog logs={logs} embedded lang={lang} t={t} />
             </div>
           </div>
-          </div>
+        </div>
+
+        {/* Cột 3: Toàn bộ Xem trước & Cắt đoạn (A→B) nằm gọn trong cột thứ 3 */}
+        <div className="min-h-0 flex flex-col min-w-0">
+          <VideoPreview
+            videoPath={files.main || null}
+            subPath={files.subtitle || null}
+            subName={files.subtitle ? basename(files.subtitle) : ''}
+            meta={metas.main}
+            status={status}
+            outputPath={outputDir && outputName ? `${outputDir}\\${withExt(outputName, outputFormat)}` : ''}
+            lang={lang}
+            t={t}
+          />
         </div>
       </main>
     </div>

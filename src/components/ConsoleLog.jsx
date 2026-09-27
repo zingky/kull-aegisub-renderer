@@ -46,8 +46,8 @@ export default function ConsoleLog({ logs, embedded = false, lang = 'vi', t }) {
   }
 
   return (
-    <div className={embedded ? '' : 'shrink-0 border-t border-slate-800 bg-[#0a0e17]'}>
-      <div className={`flex items-center gap-2 ${embedded ? 'px-0.5 pb-1' : 'px-3 pt-1.5 pb-1'}`}>
+    <div className={embedded ? 'h-full min-h-0 flex flex-col' : 'shrink-0 border-t border-slate-800 bg-[#0a0e17]'}>
+      <div className={`shrink-0 flex items-center gap-2 ${embedded ? 'px-0.5 pb-1' : 'px-3 pt-1.5 pb-1'}`}>
         <Terminal className="w-3.5 h-3.5 text-amber-400" />
         <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400">{t('log.title')}</span>
         <span className="text-[10px] text-slate-600">{t('log.sub')}</span>
@@ -72,7 +72,7 @@ export default function ConsoleLog({ logs, embedded = false, lang = 'vi', t }) {
         ref={ref}
         className={
           embedded
-            ? 'log-text h-[118px] overflow-y-auto rounded-lg border border-slate-800 bg-black/40 p-2.5 text-[11px] leading-relaxed'
+            ? 'log-text flex-1 min-h-[118px] overflow-y-auto rounded-lg border border-slate-800 bg-black/40 p-2.5 text-[11px] leading-relaxed'
             : 'log-text mx-3 mb-2 h-[104px] overflow-y-auto rounded-lg border border-slate-800 bg-black/40 p-2.5 text-[11px] leading-relaxed'
         }
       >
