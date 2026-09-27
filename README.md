@@ -44,7 +44,7 @@ Double-click file exe là xong — không cài đặt, không đụng registry, 
 
 | Tính năng | Chi tiết |
 |---|---|
-| 🎬 **Xem trước trong app** | Chọn video là player hiện ra: play/pause, tiến-lùi **1 khung · 1s · 5s**, timeline thumbnail, **xem trước phụ đề ASS live mượt mà** (hỗ trợ cả mã hóa UTF-8 và UTF-16 từ Aegisub Windows, vẽ sub ngay cả khi video đang tạm dừng) — kiểm tra đã load đúng video/sub trước khi render |
+| 🎬 **Xem trước trong app** | Chọn video là player hiện ra: play/pause, tiến-lùi **1 khung · 1s · 5s**, timeline thumbnail, **xem trước phụ đề ASS live mượt mà** (hỗ trợ cả mã hóa UTF-8 và UTF-16 từ Aegisub Windows, vẽ sub ngay cả khi video đang tạm dừng) — kiểm tra đã load đúng video/sub trước khi render. **Chống màn hình đen**: overlay phụ đề chỉ hiện sau khi vẽ xong frame đầu, quá 8s không tải được sẽ tự động tắt để video luôn hiển thị; **nút CC** bật/tắt tức thì. **Nút mở VLC/MPV** (nếu máy có cài) xem trước bằng libass native — chuẩn 100% như bản render |
 | ✂️ **Cắt đoạn A → B** | Đặt mốc A/B bằng nút → render chỉ xuất đúng đoạn đã chọn |
 | ⬇️ **Export clip A→B** | Xuất riêng đoạn A→B **không phụ đề**, **giữ nguyên định dạng gốc** |
 | 🌓 **Fade đầu / cuối** | Bật/tắt + **tuỳ chỉnh thời gian** (mặc định 100 ms). Tự áp đúng đoạn đầu & đoạn cuối thành phẩm, kể cả khi có Intro/Outro |

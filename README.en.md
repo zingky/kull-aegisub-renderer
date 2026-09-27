@@ -44,7 +44,7 @@ Just double-click the exe — no install, no registry changes, delete the file t
 
 | Feature | Details |
 |---|---|
-| 🎬 **Built-in preview** | Pick a video and the player shows up: play/pause, step **1 frame · 1s · 5s**, thumbnail timeline, **smooth live ASS subtitle preview** (supports UTF-8 & UTF-16 from Aegisub Windows, renders even when video is paused) — verify the right video/sub before rendering |
+| 🎬 **Built-in preview** | Pick a video and the player shows up: play/pause, step **1 frame · 1s · 5s**, thumbnail timeline, **smooth live ASS subtitle preview** (supports UTF-8 & UTF-16 from Aegisub Windows, renders even when video is paused) — verify the right video/sub before rendering. **Black-screen protection**: the subtitle overlay only appears after the first frame is drawn, and auto-disables after 8 s if it can't load so the video always stays visible; the **CC button** toggles it instantly. The **external player button** (if VLC/MPV is installed) previews via native libass — 100% match with the final render |
 | ✂️ **A → B trimming** | Set A/B marks with buttons → render only that range |
 | ⬇️ **Export A→B clip** | Export the A→B range alone, **no subtitles**, **original format kept** |
 | 🌓 **Fade in / out** | Toggle + **custom duration** (default 100 ms). Automatically applies to the first & last segment of the result, Intro/Outro included |

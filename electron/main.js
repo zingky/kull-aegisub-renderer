@@ -7,6 +7,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, screen } = require('electron')
 const path = require('path')
 const fs = require('fs')
+const { spawn } = require('child_process')
 const engine = require('./ffmpegEngine')
 const { checkBinaries } = require('./paths')
 
@@ -77,6 +78,62 @@ ipcMain.handle('select-dir', async (_e, lang) => {
 ipcMain.handle('open-folder', async (_e, dirPath) => {
   if (!dirPath) return false
   return shell.openPath(dirPath)
+})
+
+// ─── IPC: Mở video + phụ đề bằng trình phát ngoài (VLC / MPV / mặc định OS) ───
+// Preview ASS trong app dùng JASSUB (WebAssembly + WebGL trong Chromium): trên
+// một số máy driver GPU không vẽ được OffscreenCanvas → overlay phụ đề đen/đè
+// mất video. VLC/MPV dùng libass native nên hiển thị phụ đề chuẩn 100% như bản
+// render thật. Trả về { ok, player } — player: 'VLC' | 'MPV' | 'default' | null.
+ipcMain.handle('open-in-player', async (_e, videoPath, subPath) => {
+  if (!videoPath || !fs.existsSync(videoPath)) return { ok: false, player: null }
+  try {
+    const isWin = process.platform === 'win32'
+    const localAppData = process.env.LOCALAPPDATA || ''
+    const vlcCandidates = isWin
+      ? [
+          path.join(process.env.PROGRAMFILES || '', 'VideoLAN', 'VLC', 'vlc.exe'),
+          path.join(process.env['PROGRAMFILES(X86)'] || '', 'VideoLAN', 'VLC', 'vlc.exe'),
+          path.join(localAppData, 'Microsoft', 'WinGet', 'Links', 'vlc.exe'),
+        ]
+      : [
+          '/Applications/VLC.app/Contents/MacOS/VLC',
+          '/opt/homebrew/bin/vlc', '/usr/local/bin/vlc', '/usr/bin/vlc', '/snap/bin/vlc',
+        ]
+    const mpvCandidates = isWin
+      ? [
+          path.join(process.env.PROGRAMFILES || '', 'mpv', 'mpv.exe'),
+          path.join(process.env['PROGRAMFILES(X86)'] || '', 'mpv', 'mpv.exe'),
+          path.join(localAppData, 'mpv', 'mpv.exe'),
+          path.join(localAppData, 'Microsoft', 'WinGet', 'Links', 'mpv.exe'),
+        ]
+      : [
+          '/Applications/mpv.app/Contents/MacOS/mpv',
+          '/opt/homebrew/bin/mpv', '/usr/local/bin/mpv', '/usr/bin/mpv',
+        ]
+
+    const vlc = vlcCandidates.find((p) => p && fs.existsSync(p))
+    const mpv = vlc ? null : mpvCandidates.find((p) => p && fs.existsSync(p))
+    const player = vlc || mpv
+
+    if (player) {
+      const args = []
+      // Nạp kèm file phụ đề — cả VLC lẫn MPV đều nhận --sub-file
+      if (subPath && fs.existsSync(subPath)) args.push(`--sub-file=${subPath}`)
+      args.push(videoPath)
+      const child = spawn(player, args, { detached: true, stdio: 'ignore' })
+      child.on('error', (err) => console.warn('open-in-player spawn error:', err.message))
+      child.unref()
+      return { ok: true, player: vlc ? 'VLC' : 'MPV' }
+    }
+
+    // Không tìm thấy VLC/MPV → mở bằng trình phát mặc định của hệ điều hành
+    await shell.openPath(videoPath)
+    return { ok: true, player: 'default' }
+  } catch (err) {
+    console.warn('open-in-player failed:', err)
+    return { ok: false, player: null }
+  }
 })
 
 ipcMain.handle('check-bin', () => checkBinaries())

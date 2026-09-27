@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import {
   Play, Pause, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight,
-  SkipBack, SkipForward, Download, Plus, X, Loader2, Film,
+  SkipBack, SkipForward, Download, Plus, X, Loader2, Film, ExternalLink,
 } from 'lucide-react'
 import { basename } from '../utils/format'
 
@@ -30,9 +30,19 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
   const [thumbs, setThumbs] = useState([])
   const [jassubState, setJassubState] = useState('off')
   const [videoError, setVideoError] = useState(false)
-  // key cho <canvas> để mỗi lần đổi file sub / reload sub thì React render phần tử DOM mới sạch sẽ,
-  // tránh lỗi OffscreenCanvas (đã transferControlToOffscreen thì không dùng lại được)
-  const [canvasKey, setCanvasKey] = useState(0)
+  // Overlay phụ đề CHỈ hiện sau khi JASSUB vẽ xong frame đầu → không bao giờ
+  // để canvas chưa vẽ (hoặc canvas lỗi GPU) đè che video bằng mảng đen.
+  const [overlayReady, setOverlayReady] = useState(false)
+  // Bật/tắt preview phụ đề ASS ngay trên UI (nút CC) — dùng khi file ASS nặng
+  // hoặc driver GPU gây lỗi để khôi phục video hiển thị bình thường tức thì.
+  const [subsEnabled, setSubsEnabled] = useState(() => {
+    try { return localStorage.getItem('kull.subsEnabled') !== '0' } catch (e) { return true }
+  })
+  // Gợi ý kết quả mở trình phát ngoài (VLC/MPV) — tự ẩn sau vài giây
+  const [playerTip, setPlayerTip] = useState(null)
+  // Host chứa <canvas> phụ đề — canvas do CHÍNH effect tạo (không do React render)
+  // → tránh lỗi "OffscreenCanvas đã transferControlToOffscreen không dùng lại được"
+  const canvasHostRef = useRef(null)
   // Kích thước gốc của video (px) → dùng cho tỉ lệ khung preview.
   // Lấy từ probe, cập nhật lại (chính xác hơn) khi video load xong metadata.
   const [videoSize, setVideoSize] = useState({ w: meta?.width || 0, h: meta?.height || 0 })
@@ -76,35 +86,64 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
     if (thumbsDirRef.current && window.renderAPI?.cleanupThumbs) window.renderAPI.cleanupThumbs(thumbsDirRef.current)
   }, [])
 
-  // JASSUB phụ đề live (lazy import)
+  // ── JASSUB phụ đề live (lazy import) ──────────────────────────────────────
+  // Chống màn hình ĐEN khi preview ASS:
+  //  • Tự tạo <canvas> mới mỗi lần, gắn vào host div riêng → không dùng lại
+  //    OffscreenCanvas đã transferControlToOffscreen (hết lỗi InvalidStateError).
+  //  • Overlay ẩn (opacity 0) cho tới khi JASSUB vẽ xong frame đầu → video
+  //    không bao giờ bị che bởi canvas chưa vẽ / canvas lỗi GPU.
+  //  • Watchdog 8s: worker/WASM không lên kịp → gỡ overlay, báo fail an toàn,
+  //    video vẫn hiển thị bình thường (không bao giờ treo màn hình đen).
   useEffect(() => {
     let canceled = false
-    if (!videoPath || !subPath || !/\.ass$/i.test(subPath || '')) {
+    let settled = false
+    let initTimer = null
+    let watchdog = null
+    let instance = null
+    const host = canvasHostRef.current
+
+    const clearOverlay = () => {
+      setOverlayReady(false)
+      try {
+        if (host) [...host.querySelectorAll('canvas')].forEach((el) => el.remove())
+      } catch (e) {}
+      canvasRef.current = null
+    }
+
+    if (!videoPath || !subPath || !/\.ass$/i.test(subPath || '') || !subsEnabled) {
       setJassubState('off')
       try { jassubRef.current?.destroy?.() } catch (e) {}
       jassubRef.current = null
-      return
+      clearOverlay()
+      return () => { canceled = true; clearTimeout(initTimer); clearTimeout(watchdog) }
     }
+    if (!host) return () => { canceled = true; clearTimeout(initTimer); clearTimeout(watchdog) }
 
     setJassubState('loading')
-    // Đổi canvasKey để React tạo lại thẻ <canvas> mới sạch sẽ (tránh lỗi OffscreenCanvas reused)
-    setCanvasKey((k) => k + 1)
+    setOverlayReady(false)
 
-    // Đợi DOM render canvas mới rồi mới khởi tạo JASSUB
-    const initTimer = setTimeout(() => {
+    // Đợi 1 frame cho React mount host xong rồi mới khởi tạo JASSUB
+    initTimer = setTimeout(() => {
       if (canceled) return
       Promise.all([import('jassub'), window.renderAPI.readFileText(subPath)]).then(async ([mod, content]) => {
         if (canceled || !content) {
-          if (!content && !canceled) setJassubState('fail')
+          if (!content && !canceled) { setJassubState('fail'); clearOverlay() }
           return
         }
         try { jassubRef.current?.destroy?.() } catch (e) {}
+        clearOverlay()
 
         const v = videoRef.current
-        const c = canvasRef.current
-        if (!v || !c) return
+        if (!v) return
 
-        const instance = new mod.default({
+        // Canvas do ta tự tạo → JASSUB chỉ transferControlToOffscreen, không đụng DOM React
+        const c = document.createElement('canvas')
+        c.className = 'absolute inset-0 w-full h-full pointer-events-none'
+        c.style.opacity = '0'
+        host.appendChild(c)
+        canvasRef.current = c
+
+        instance = new mod.default({
           video: v,
           canvas: c,
           subContent: content,
@@ -113,33 +152,58 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
           prescaleFactor: 1.0,
         })
         jassubRef.current = instance
-        setJassubState('ok')
 
-        // Vẽ ngay frame đầu tiên (khi video đang pause tại 00:00 thì Chromium không tự gọi RVFC)
+        // Watchdog: quá 8s chưa sẵn sàng → fail an toàn (gỡ overlay, giữ video sáng)
+        watchdog = setTimeout(() => {
+          if (canceled || settled) return
+          settled = true
+          console.warn('[JASSUB] khởi tạo quá 8 giây → tắt overlay phụ đề để giữ video hiển thị')
+          setJassubState('fail')
+          try { instance?.destroy?.() } catch (e) {}
+          jassubRef.current = null
+          clearOverlay()
+        }, 8000)
+
         try {
           await instance.ready
-          if (!canceled && v) {
-            instance.manualRender({
-              expectedDisplayTime: performance.now(),
-              width: v.videoWidth || 1920,
-              height: v.videoHeight || 1080,
-              mediaTime: v.currentTime || 0,
-            }, true)
-          }
-        } catch (e) {}
+          if (canceled || settled) return
+          // Vẽ ngay frame đầu (video pause tại 00:00 thì Chromium không tự gọi RVFC)
+          await instance.manualRender({
+            expectedDisplayTime: performance.now(),
+            width: v.videoWidth || 1920,
+            height: v.videoHeight || 1080,
+            mediaTime: v.currentTime || 0,
+          }, true)
+          settled = true
+          clearTimeout(watchdog)
+          c.style.opacity = '1' // frame đầu đã vẽ xong → mới hiện overlay
+          setOverlayReady(true)
+          setJassubState('ok')
+        } catch (err) {
+          if (canceled || settled) return
+          settled = true
+          clearTimeout(watchdog)
+          console.warn('[JASSUB] render frame đầu lỗi:', err)
+          setJassubState('fail')
+          try { instance?.destroy?.() } catch (e) {}
+          jassubRef.current = null
+          clearOverlay()
+        }
       }).catch((err) => {
         console.warn('JASSUB load failed:', err)
-        if (!canceled) setJassubState('fail')
+        if (!canceled) { setJassubState('fail'); clearOverlay() }
       })
     }, 50)
 
     return () => {
       canceled = true
       clearTimeout(initTimer)
+      clearTimeout(watchdog)
       try { jassubRef.current?.destroy?.() } catch (e) {}
       jassubRef.current = null
+      clearOverlay()
     }
-  }, [videoPath, subPath])
+  }, [videoPath, subPath, subsEnabled])
 
   // Player events + pause khi render
   useEffect(() => {
@@ -283,6 +347,36 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
     setTimeout(() => setExDone(false), 5000)
   }
 
+  // ── Mở video + phụ đề bằng trình phát ngoài (VLC/MPV — libass native) ──
+  const openExternal = async () => {
+    if (!videoPath || !window.renderAPI?.openInPlayer) return
+    try {
+      const res = await window.renderAPI.openInPlayer(
+        videoPath,
+        /\.ass$/i.test(subPath || '') ? subPath : null
+      )
+      if (!res?.ok) setPlayerTip(t('pv.playerFail'))
+      else if (res.player === 'default') setPlayerTip(t('pv.playerMissing'))
+      else setPlayerTip(`${t('pv.openedWith')} ${res.player}`)
+    } catch (e) {
+      setPlayerTip(t('pv.playerFail'))
+    }
+  }
+
+  // Bật/tắt overlay phụ đề ASS trong app (tắt ngay nếu GPU/worker gây lỗi)
+  const toggleSubs = () => {
+    const next = !subsEnabled
+    setSubsEnabled(next)
+    try { localStorage.setItem('kull.subsEnabled', next ? '1' : '0') } catch (e) {}
+  }
+
+  // Tự ẩn gợi ý mở trình phát sau 4 giây
+  useEffect(() => {
+    if (!playerTip) return
+    const id = setTimeout(() => setPlayerTip(null), 4000)
+    return () => clearTimeout(id)
+  }, [playerTip])
+
   const inTrim = cur >= trim.start && cur <= trim.end
   const pct = (s) => (duration > 0 ? (s / duration) * 100 : 0)
 
@@ -294,17 +388,39 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
   return (
     <div className="h-full w-full rounded-xl border border-slate-800 bg-[#0f1526]/70 p-2.5 flex flex-col gap-2 min-h-0">
       {/* ── Tiêu đề card Cột 3 ── */}
-      <div className="flex items-center justify-between shrink-0">
-        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+      <div className="flex items-center justify-between shrink-0 gap-2">
+        <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2 shrink-0">
           <span>{t('pv.title')}</span>
           {jassubState === 'ok' && <span className="normal-case text-[10px] text-emerald-400">ASS live ✓</span>}
           {jassubState === 'fail' && <span className="normal-case text-[10px] text-amber-400">{t('pv.assFail')}</span>}
+          {playerTip && <span className="normal-case text-[10px] text-sky-300">{playerTip}</span>}
         </h2>
-        {videoPath && (
-          <span className="text-[10px] text-slate-500 truncate max-w-[200px]" title={videoPath}>
-            {basename(videoPath)}
-          </span>
-        )}
+        <div className="flex items-center gap-1.5 shrink-0 min-w-0">
+          {videoPath && (
+            <span className="text-[10px] text-slate-500 truncate max-w-[200px]" title={videoPath}>
+              {basename(videoPath)}
+            </span>
+          )}
+          {/* Mở bằng VLC/MPV ngoài — libass native, hiển thị phụ đề chuẩn 100% như render */}
+          {videoPath && (
+            <Btn title={t('pv.openVlc')} onClick={openExternal}>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </Btn>
+          )}
+          {/* Nút CC: bật/tắt overlay phụ đề ASS trong app (tắt ngay nếu GPU/worker lỗi) */}
+          {subPath && /\.ass$/i.test(subPath || '') && (
+            <Btn
+              title={subsEnabled ? t('pv.subsOff') : t('pv.subsOn')}
+              onClick={toggleSubs}
+              className={clsx(
+                subsEnabled && overlayReady && 'border-emerald-500/60 text-emerald-300',
+                subsEnabled && !overlayReady && 'border-amber-500/50 text-amber-300'
+              )}
+            >
+              <span className="text-[9px] font-bold leading-none tracking-tight">CC</span>
+            </Btn>
+          )}
+        </div>
       </div>
 
       {/* ── Khung Video: rộng hết cột, chiều cao theo ĐÚNG tỉ lệ video (không letterbox) ── */}
@@ -328,7 +444,8 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
               onError={() => setVideoError(true)}
               onClick={togglePlay}
             />
-            <canvas key={canvasKey} ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />
+            {/* Host phụ đề: canvas do effect tự tạo rồi JASSUB render qua OffscreenCanvas */}
+            <div ref={canvasHostRef} className="absolute inset-0 pointer-events-none" aria-hidden="true" />
             {videoError && (
               <div className="absolute inset-0 flex items-center justify-center text-center text-[11px] text-amber-300 bg-black/70 p-4">
                 {t('pv.codecFail')}

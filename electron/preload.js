@@ -27,6 +27,8 @@ contextBridge.exposeInMainWorld('renderAPI', {
   startRender: (options) => ipcRenderer.invoke('render:start', options),
   cancelRender: () => ipcRenderer.invoke('render:cancel'),
   openFolder: (dirPath) => ipcRenderer.invoke('open-folder', dirPath),
+  // IPC: mở video + phụ đề bằng VLC/MPV/native player (libass native — chuẩn như render)
+  openInPlayer: (videoPath, subPath) => ipcRenderer.invoke('open-in-player', videoPath, subPath),
   checkBin: () => ipcRenderer.invoke('check-bin'),
   getEncoders: () => ipcRenderer.invoke('get-encoders'),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
