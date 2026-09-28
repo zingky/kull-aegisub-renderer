@@ -18,6 +18,7 @@
     "test:vsfilter": "node scripts/test-vsfilter.js",
     "test:vsfm-effects": "node scripts/test-vsfm-effects.js",
     "test:avs-seek": "node scripts/test-avs-seek.js",
+    "test:enc-probe": "node scripts/test-encoder-probe.js",
     "dist": "npm run build && electron-builder"
   },
   "dependencies": {

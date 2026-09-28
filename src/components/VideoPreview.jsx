@@ -93,6 +93,10 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
   //  • Overlay CHỈ hiện khi video tạm dừng và frame đã render xong → không bao giờ
   //    có canvas đen đè lên video; khi phát lại thì ẩn ngay lập tức.
   //  • Seek/đổi file/đổi phụ đề/tắt CC → hủy request cũ (seq) rồi render lại.
+  //  • ĐANG RENDER → dừng hẳn: bỏ qua `status` trong deps, tháo sạch listener và
+  //    tăng seq để mọi response đang dở bị bỏ. Nếu không, useEffect pause ở
+  //    effect bên dưới sẽ bắn event 'pause' → request() → spawn thêm ffmpeg
+  //    chạy song song, tranh CPU (AviSynth + VSFilterMod) với tiến trình render chính.
   useEffect(() => {
     const v = videoRef.current
     frameSeqRef.current++
@@ -102,6 +106,7 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
     setFrameBusy(false)
     setFrameFail(false)
     const enabled =
+      status !== 'running' && // render đang chạy → không sinh frame nào nữa
       videoPath && subPath && subsEnabled &&
       /\.(ass|ssa|srt)$/i.test(subPath || '') &&
       window.renderAPI?.renderPreviewFrame
@@ -171,7 +176,7 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
         v.removeEventListener('loadedmetadata', request)
       }
     }
-  }, [videoPath, subPath, subsEnabled, engine])
+  }, [videoPath, subPath, subsEnabled, engine, status])
 
   // Player events + pause khi render
   useEffect(() => {
@@ -198,11 +203,18 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
   }, [videoPath])
 
   useEffect(() => {
-    if (status === 'running' && videoRef.current && !videoRef.current.paused) videoRef.current.pause()
+    if (status !== 'running') return
+    // Render đang chạy → dừng phát và huỷ ffmpeg preview còn treo để CPU/I/O
+    // dành trọn cho render chính. Effect preview ở trên đã tự tháo listener
+    // (nhờ `status` trong deps + enabled=false) nên không còn frame nào sinh nữa.
+    if (videoRef.current && !videoRef.current.paused) videoRef.current.pause()
+    window.renderAPI?.cancelPreviewFrame?.()
   }, [status])
 
-  // Con trỏ tiến độ mượt (rAF ~60fps) — timeupdate chỉ ~4Hz nên bị giật
+  // Con trỏ tiến độ mượt (rAF ~60fps) — timeupdate chỉ ~4Hz nên bị giật.
+  // Tắt hẳn khi render để không dựng lại React 60 lần/s cho con trỏ đứng yên.
   useEffect(() => {
+    if (status === 'running') return undefined
     let raf
     const tick = () => {
       const v = videoRef.current
@@ -211,7 +223,7 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
     }
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [])
+  }, [status])
 
   // Nhận % tiến độ khi xuất clip A→B (cùng kênh render:progress)
   useEffect(() => {

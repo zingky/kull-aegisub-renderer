@@ -141,7 +141,7 @@ function parseProgressLine(line, total, totalFrames, elapsed) {
 
 // ─────────────────────────────────────────────────────────────
 // 4. PHÁT HIỆN NĂNG LỰC MÁY (cache 1 lần)
-//    - Encoder GPU khả dụng (nvenc/qsv/amf) qua `ffmpeg -encoders`
+//    - Encoder GPU: PROBE ENCODE THẬT (xem ghi chú probeEncoder bên dưới)
 //    - FFmpeg build có hỗ trợ avisynth hay không
 //    - AviSynth+ có được cài trong máy hay không
 // ─────────────────────────────────────────────────────────────
@@ -164,14 +164,81 @@ function runCapture(binary, args) {
   })
 }
 
+//  KÍCH THƯỚC TỐI THIỂU 256x256 — KHÔNG được giảm.
+//    NVENC/AMF/QSV từ chối frame quá nhỏ (64x64 → "Invalid parameters"), nên probe
+//    quá nhỏ cho kết quả FAIL GIẢ. 256x256 là bội số 16/32 mà cả 3 backend chấp nhận.
+const PROBE_SIZE = '256x256'
+const PROBE_TIMEOUT_MS = 8000
+
+/**
+ * PROBE ENCODE THẬT cho 1 encoder → true nếu mở device + encode 1 frame thành công.
+ *
+ *  VÌ SAO KHÔNG DÙNG `ffmpeg -encoders`:
+ *    `-encoders` chỉ liệt kê encoder ĐÃ BUILD, KHÔNG kiểm tra GPU/driver.
+ *    FFmpeg 9 bản gyan.dev build `--enable-amf` nên luôn in ra `h264_amf` dù máy
+ *    không có GPU AMD → app hiển thị "AMF khả dụng", người dùng chọn xong render
+ *    chết ngay với `[AMF] DLL amfrt64.dll failed to open`. Tương tự QSV khi thiếu
+ *    iGPU/driver Intel. Grep tên ⇒ false positive. Chỉ encode thật mới phân biệt được.
+ *
+ *  Chi phí: NVENC ~0.29s, QSV ~1.23s, AMF fail nhanh ~0.07s — chạy SONG SONG 1 lần
+ *  rồi cache, không ảnh hưởng thời gian render.
+ */
+function probeEncoder(encoder) {
+  return new Promise((resolve) => {
+    let child
+    let done = false
+    let reason = ''
+    const finish = (ok) => {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      try { child.kill() } catch (e) {}
+      // Ghi lý do để chẩn đoán được "sao không thấy AMF/QSV" mà không cần bật app.
+      if (!ok) console.warn(`[encoder-probe] ${encoder} KHÔNG dùng được: ${reason || 'unknown'}`)
+      resolve(ok)
+    }
+    const timer = setTimeout(() => { reason = `timeout ${PROBE_TIMEOUT_MS}ms`; finish(false) }, PROBE_TIMEOUT_MS)
+    try {
+      child = spawn(
+        ffmpegPath,
+        [
+          '-hide_banner', '-nostdin', '-loglevel', 'error',
+          '-f', 'lavfi', '-i', `color=c=black:s=${PROBE_SIZE}:r=1:d=1`,
+          '-frames:v', '1', '-c:v', encoder,
+          '-f', 'null', '-',
+        ],
+        { windowsHide: true }
+      )
+    } catch (e) {
+      reason = e.message
+      return finish(false)
+    }
+    let stderr = ''
+    child.stderr.on('data', (d) => { if (stderr.length < 2048) stderr += d.toString('utf8') })
+    child.on('error', (e) => { reason = e.message; finish(false) })
+    // exit 0 ⇒ thật sự mở được hardware device và encode được frame.
+    child.on('close', (code) => {
+      if (code !== 0) reason = (stderr.trim().split('\n').pop() || `exit ${code}`).slice(0, 300)
+      finish(code === 0)
+    })
+  })
+}
+
+/**
+ * Danh sách backend GPU dùng ĐƯỢC THẬT + 'cpu' luôn ở cuối.
+ * Gọi song song 3 probe để giới hạn độ trễ khởi động (~1.3s, tức là lần chạm NVENC đầu tiên).
+ */
 async function detectEncoders() {
   if (encoderCache) return encoderCache
-  const out = await runCapture(ffmpegPath, ['-hide_banner', '-encoders'])
-  const has = (n) => out.includes(n)
+  const [nvenc, qsv, amf] = await Promise.all([
+    probeEncoder('h264_nvenc'),
+    probeEncoder('h264_qsv'),
+    probeEncoder('h264_amf'),
+  ])
   encoderCache = []
-  if (has('h264_nvenc')) encoderCache.push('nvenc')
-  if (has('h264_qsv')) encoderCache.push('qsv')
-  if (has('h264_amf')) encoderCache.push('amf')
+  if (nvenc) encoderCache.push('nvenc')
+  if (qsv) encoderCache.push('qsv')
+  if (amf) encoderCache.push('amf')
   encoderCache.push('cpu') // CPU (libx264/libx265) luôn khả dụng
   return encoderCache
 }
@@ -914,6 +981,7 @@ module.exports = {
   startRender,
   cancelRender,
   detectEncoders,
+  pickEncoder,
   buildRenderCommand,
   parseProgressLine,
   escapeFilterPath,

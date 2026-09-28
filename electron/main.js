@@ -239,6 +239,18 @@ async function previewVideoFps(videoPath) {
   }
 }
 
+// Tiến trình preview-frame đang chạy. Renderer báo 'preview-cancel' khi bắt đầu
+// render để ta HỦY ffmpeg preview còn treo — nếu không, frame AviSynth+VSFilterMod
+// vẫn cắm CPU thêm vài giây đúng lúc render cần hết tài nguyên (file .ass nặng).
+let previewChild = null
+let previewChildSeq = 0
+
+function cancelPreviewFrame() {
+  if (!previewChild) return
+  try { previewChild.kill() } catch (e) {}
+  previewChild = null
+}
+
 /** Chạy ffmpeg xuất 1 frame → resolve khi exit 0, reject khi lỗi/timeout */
 function runPreviewFrame(args, timeoutMs) {
   return new Promise((resolve, reject) => {
@@ -248,15 +260,22 @@ function runPreviewFrame(args, timeoutMs) {
     } catch (err) {
       return reject(err)
     }
+    // Giữ tham chiếu để ipc 'preview-cancel' hủy được tiến trình đang treo.
+    previewChild = child
+    previewChildSeq = previewFrameSeq
+    const done = (fn, arg) => {
+      clearTimeout(timer)
+      if (previewChildSeq === previewFrameSeq && previewChild === child) previewChild = null
+      fn(arg)
+    }
     const timer = setTimeout(() => {
       try { child.kill() } catch (e) {}
-      reject(new Error('preview-frame timeout'))
+      done(reject, new Error('preview-frame timeout'))
     }, timeoutMs)
-    child.on('error', (err) => { clearTimeout(timer); reject(err) })
+    child.on('error', (err) => done(reject, err))
     child.on('close', (code) => {
-      clearTimeout(timer)
-      if (code === 0) resolve()
-      else reject(new Error('ffmpeg exit ' + code))
+      if (code === 0) done(resolve)
+      else done(reject, new Error('ffmpeg exit ' + code))
     })
   })
 }
@@ -325,6 +344,13 @@ ipcMain.handle('preview-frame', async (_e, opts) => {
     try { fs.unlinkSync(outFile) } catch (e) {}
     if (avsPath) { try { fs.unlinkSync(avsPath) } catch (e) {} }
   }
+})
+
+// Hủy ffmpeg preview-frame đang chạy (renderer gọi khi bắt đầu render).
+// Tăng seq để response đang dở không còn ai đọc nữa.
+ipcMain.on('preview-cancel', () => {
+  previewFrameSeq++
+  cancelPreviewFrame()
 })
 
 // ─── IPC: tự canh chiều cao cửa sổ cho VỪA KHÍT nội dung Cột 1 ─
