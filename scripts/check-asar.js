@@ -47,6 +47,11 @@ ok(/clipIsWebM/.test(t), 'engine co nhanh clipIsWebM (WebM cho clip)')
 ok(/isWebM/.test(t), 'engine co nhanh isWebM (WebM cho render chinh)')
 ok(/libvpx-vp9/.test(t), 'engine dung libvpx-vp9 cho WebM')
 ok(/libopus/.test(t), 'engine dung libopus cho WebM')
+
+console.log('\n[2c] Tinh nang "mui ten tua theo buoc" (v2.0.3)')
+ok(/pv\.stepMode/.test(t), 'khoa i18n pv.stepMode (nhan buoc tua) co trong asar')
+ok(/pv\.stepModeTip/.test(t), 'khoa i18n pv.stepModeTip (tooltip) co trong asar')
+ok(/pv-step-hint/.test(t), 'phan tu #pv-step-hint (nhan buoc tua) co trong asar')
 console.log('\n[3] File ch\u1EA1y \u0111\u01B0\u1ED3c \u0111\u00F3ng g\u00F3i')
 const rel = path.join(__dirname, '..', outDir)
 const _ver = require('../package.json').version

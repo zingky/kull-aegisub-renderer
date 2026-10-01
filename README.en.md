@@ -15,16 +15,16 @@ Desktop app that **burns (hardsubs) ASS/SRT subtitles into video** — **Electro
 
 ## 📥 Prebuilt download (no installation)
 
-All builds on [Releases](https://github.com/zingky/kull-aegisub-renderer/releases/tag/v2.0.2). Two options:
+All builds on [Releases](https://github.com/zingky/kull-aegisub-renderer/releases/tag/v2.0.3). Two options:
 
 | Build | Size | Startup | Notes |
 |---|---|---|---|
-| **[ZIP - win-x64](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.2/KullAegisubRenderer-2.0.2-win-x64.zip)** ⭐ | ~192 MB | **~0.4 s** | Fastest — extract once, then run |
-| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.2/KullAegisubRenderer-2.0.2-portable.exe)** | ~130 MB | 6-12 s | Single file, easy to carry around |
+| **[ZIP - win-x64](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.3/KullAegisubRenderer-2.0.3-win-x64.zip)** ⭐ | ~192 MB | **~0.4 s** | Fastest — extract once, then run |
+| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.3/KullAegisubRenderer-2.0.3-portable.exe)** | ~130 MB | 6-12 s | Single file, easy to carry around |
 
 ### How to use the ZIP build (recommended)
 
-1. Download `KullAegisubRenderer-2.0.2-win-x64.zip` → right-click → **Extract All…** into any folder (e.g. `D:\KullAegisubRenderer`).
+1. Download `KullAegisubRenderer-2.0.3-win-x64.zip` → right-click → **Extract All…** into any folder (e.g. `D:\KullAegisubRenderer`).
 2. Open that folder and run **`Kull Aegisub Renderer.exe`**.
 3. On first launch SmartScreen may warn (unsigned app) → **More info → Run anyway**. Afterwards it opens in ~0.4 s.
 
@@ -39,6 +39,10 @@ Just double-click the exe — no install, no registry changes, delete the file t
 - Requires **Windows 10/11 64-bit**. Bundled toolkit: `ffmpeg`, `ffprobe`, `AviSynth.dll`, `VSFilterMod.dll`, `VSFilter.dll`, `DirectShowSource.dll`.
 
 ---
+
+## ✨ What's new in 2.0.3
+
+- **Arrow ←/→ now seeks by the step you picked**: click **1 frame** / **±1s** / **±5s** and the arrows follow that exact step; nothing clicked yet → **1 second** (default). The selected button glows with a green ring and a `← → step 1s` label shows above the clock. **Shift + ←/→** still jumps ±5s.
 
 ## 🐛 Fixed in 2.0.2
 
@@ -107,7 +111,7 @@ npm run dist         # → release/KullAegisubRenderer-<version>-portable.exe  (
 ### Updating the Release body
 
 ```bash
-node scripts/setReleaseNotes.js docs/release-notes-v2.0.2.md v2.0.2
+node scripts/setReleaseNotes.js docs/release-notes-v2.0.3.md v2.0.3
 ```
 
 > ⚠️ **Never write release notes with PowerShell.** PowerShell 5 reads a BOM-less `.ps1` as ANSI (CP1252), so non-ASCII text is already corrupted before it reaches GitHub. The Node script above reads/writes proper UTF-8 and then **re-fetches the release and compares hashes** to prove the body matches the source file.
