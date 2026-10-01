@@ -51,6 +51,9 @@ console.log(`Assets : ${assets.map((a) => path.basename(a)).join(', ') || '(khô
 
 /** Gọi REST API GitHub, trả JSON đã parse */
 function api(pathOrUrl, { method = 'GET', body, raw = false, headers = {} } = {}) {
+  // GHI CHÚ: phải nối Buffer rồi mới decode UTF-8. Cách `out += chunk` giải mã
+  // TỪNG chunk riêng → ký tự nhiều byte (vd 'ậ' = E1 BA AD) bị cắt giữa 2 chunk TCP
+  // sẽ thành U+FFFD → so hash body báo "SAI" oan dù GitHub lưu đúng.
   const url = pathOrUrl.startsWith('http') ? pathOrUrl : `https://api.github.com${pathOrUrl}`
   const data = body ? Buffer.from(typeof body === 'string' ? body : JSON.stringify(body), 'utf8') : null
   return new Promise((resolve, reject) => {
@@ -64,9 +67,10 @@ function api(pathOrUrl, { method = 'GET', body, raw = false, headers = {} } = {}
         ...headers,
       },
     }, (res) => {
-      let out = ''
-      res.on('data', (c) => { out += c })
+      const chunks = []
+      res.on('data', (c) => { chunks.push(c) })
       res.on('end', () => {
+        const out = Buffer.concat(chunks).toString('utf8')
         if (res.statusCode >= 200 && res.statusCode < 300) {
           resolve(raw ? out : (out ? JSON.parse(out) : {}))
         } else {
@@ -95,9 +99,10 @@ function uploadAsset(uploadUrl, file) {
         'Content-Length': size,
       },
     }, (res) => {
-      let out = ''
-      res.on('data', (c) => { out += c })
+      const chunks = []
+      res.on('data', (c) => { chunks.push(c) })
       res.on('end', () => {
+        const out = Buffer.concat(chunks).toString('utf8')
         if (res.statusCode >= 200 && res.statusCode < 300) resolve(JSON.parse(out))
         else reject(new Error(`HTTP ${res.statusCode} upload ${name}\n${String(out).slice(0, 500)}`))
       })
