@@ -15,16 +15,16 @@ App desktop **ghép cứng phụ đề ASS/SRT vào video (Hardsub)** — **Elec
 
 ## 📥 Tải bản dựng sẵn (không cần cài đặt)
 
-Mọi bản phát hành ở [Releases](https://github.com/zingky/kull-aegisub-renderer/releases/tag/v2.0.1). Có 2 lựa chọn:
+Mọi bản phát hành ở [Releases](https://github.com/zingky/kull-aegisub-renderer/releases/tag/v2.0.2). Có 2 lựa chọn:
 
 | Bản | Dung lượng | Mở app | Ghi chú |
 |---|---|---|---|
-| **[ZIP - win-x64](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.1/KullAegisubRenderer-2.0.1-win-x64.zip)** ⭐ | ~194 MB | **~0.4 giây** | Nhanh nhất — giải nén 1 lần rồi chạy |
-| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.1/KullAegisubRenderer-2.0.1-portable.exe)** | ~130 MB | 6-12 giây | 1 file duy nhất, tiện mang theo |
+| **[ZIP - win-x64](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.2/KullAegisubRenderer-2.0.2-win-x64.zip)** ⭐ | ~192 MB | **~0.4 giây** | Nhanh nhất — giải nén 1 lần rồi chạy |
+| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.2/KullAegisubRenderer-2.0.2-portable.exe)** | ~130 MB | 6-12 giây | 1 file duy nhất, tiện mang theo |
 
 ### Cách dùng bản ZIP (khuyến nghị)
 
-1. Tải `KullAegisubRenderer-2.0.1-win-x64.zip` → chuột phải → **Extract All…** ra thư mục bất kỳ (VD `D:\KullAegisubRenderer`).
+1. Tải `KullAegisubRenderer-2.0.2-win-x64.zip` → chuột phải → **Extract All…** ra thư mục bất kỳ (VD `D:\KullAegisubRenderer`).
 2. Vào thư mục vừa giải nén → chạy **`Kull Aegisub Renderer.exe`**.
 3. Lần đầu SmartScreen có thể cảnh báo (app chưa ký số) → **More info → Run anyway**. Từ lần sau mở chỉ ~0.4 giây.
 
@@ -39,6 +39,16 @@ Double-click file exe là xong — không cài đặt, không đụng registry, 
 - Yêu cầu **Windows 10/11 64-bit**. Kèm sẵn toolkit: `ffmpeg`, `ffprobe`, `AviSynth.dll`, `VSFilterMod.dll`, `VSFilter.dll`, `DirectShowSource.dll`.
 
 ---
+
+## 🐛 Sửa lỗi ở 2.0.2
+
+- **Hết méo tiếng “rè” trên Facebook**: clip A→B trước đây có đỉnh vượt 0 dBFS (True Peak +1.4 dBFS) nên Facebook chuẩn hoá rồi nén lại làm méo. Nay engine chặn đỉnh về **−1.5 dBFS** ngay khi xuất clip (áp cho cả MP4 và WebM).
+- **Xuất WebM không còn lỗi**: chọn `.webm` trước đây khiến FFmpeg thoát lỗi `-22` (không tạo được file) vì bị ép H.264/AAC — nay render chính và clip đều dùng đúng **VP9 + Opus**.
+- **Đuôi file clip A→B theo định dạng đã chọn**: trước đây lấy đuôi từ **file gốc** nên chọn MP4 nhưng nguồn `.mkv` thì clip vẫn ra `.mkv`.
+- **Nút tiến/lùi “1 frame” chính xác**: trước đây cộng nhầm `1/fps` (số thực) nên bị lệch; nay nhảy theo **chỉ số frame nguyên** và hiện luôn **số frame** cạnh đồng hồ.
+- **Dò encoder GPU chính xác**: trước đây dò nhầm là “có AMF/QSV” (chỉ kiểm tra danh sách) dù máy thiếu `amfrt64.dll` → render chết giữa chừng. Nay app **encode thử thật khung 256×256** rồi mới báo hỗ trợ.
+- **Dung lượng file xuất / ETA / thời gian render**: sửa parse dung lượng của FFmpeg 9 (dùng `KiB`/`MiB` chứ không phải `kB`/`MB`), ETA ổn định hơn, log báo **thời gian render thực**.
+- **Tự dừng xem trước khi render**: đang phát preview mà bấm render thì preview tự dừng → không tranh CPU.
 
 ## 🐛 Sửa lỗi ở 2.0.1
 
@@ -97,7 +107,7 @@ npm run dist         # → release/KullAegisubRenderer-<version>-portable.exe  (
 ### Cập nhật nội dung Release
 
 ```bash
-node scripts/setReleaseNotes.js docs/release-notes-v2.0.1.md v2.0.1
+node scripts/setReleaseNotes.js docs/release-notes-v2.0.2.md v2.0.2
 ```
 
 > ⚠️ **Đừng dùng PowerShell để ghi release notes.** PowerShell 5 đọc file `.ps1` không BOM theo bảng mã ANSI (CP1252) nên tiếng Việt bị hỏng ngay trước khi gửi lên GitHub → release hiển thị dạng `ghĂ©p cá»©ng phá»¥ Ä‘á»‹`. Script Node ở trên đọc/ghi UTF-8 chuẩn, sau khi ghi còn **tự GET lại và so hash** để chắc chắn nội dung khớp file gốc.
@@ -146,7 +156,7 @@ Kiểm tra nhanh: `npm run check:bin`
 ```
 electron/   main.js (IPC) · preload.js · ffmpegEngine.js (Core Engine) · i18n.js · paths.js
 src/        App.jsx · i18n.js (từ điển VI/EN) · components/ (8 UI + LangSwitch + ErrorBoundary) · utils/
-scripts/    checkBin · e2eTest · repro-select · checkI18n · checkRows · checkQuality · test-vsfilter · test-vsfm-effects · test-avs-seek · test-avs-dlls · zipRenderTest · afterPackIcon · setReleaseNotes
+scripts/    checkBin · e2eTest · repro-select · checkI18n · checkRows · checkQuality · test-vsfilter · test-vsfm-effects · test-avs-seek · test-avs-dlls · test-encoder-probe · test-frame-step · test-output-format · test-clip-audio · check-asar · zipRenderTest · afterPackIcon · setReleaseNotes
 bin/        ffmpeg · ffprobe · AviSynth.dll · VSFilter*.dll · avsplugins/
 ```
 

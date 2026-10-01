@@ -401,6 +401,7 @@ export default function App() {
             status={status}
             engine={engine}
             outputPath={outputDir && outputName ? `${outputDir}\\${withExt(outputName, outputFormat)}` : ''}
+            outputFormat={outputFormat}
             lang={lang}
             t={t}
           />

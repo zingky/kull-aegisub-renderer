@@ -611,25 +611,36 @@ async function buildRenderCommand(options) {
   }
 
   // 9f. Video encoder — Constrained VBR
-  args.push('-c:v', enc.encoder)
-  if (enc.encoder === 'libx264' || enc.encoder === 'libx265') {
-    const presets = { original: 'slow', high: 'slow', balanced: 'medium', small: 'fast', custom: 'medium' }
-    args.push('-preset', presets[options.quality] || 'medium')
-  } else if (enc.encoder.includes('nvenc')) {
-    args.push('-rc', 'vbr', '-preset', 'p6', '-tune', 'hq', '-multipass', 'qres')
-  } else if (enc.encoder.includes('qsv')) {
-    args.push('-preset', 'medium')
-  } else if (enc.encoder.includes('amf')) {
-    args.push('-quality', 'quality')
+  // WEBM chỉ nhận VP8/VP9/AV1 + Vorbis/Opus. Nếu ép H.264/AAC vào .webm thì
+  // ffmpeg exit -22 "Could not write header" và KHÔNG tạo được file. Vì vậy
+  // khi user chọn WebM phải đổi hẳn codec, không phải chỉ đổi đuôi file.
+  const isWebM = path.extname(options.outputPath || '').toLowerCase() === '.webm'
+  if (isWebM) {
+    args.push('-c:v', 'libvpx-vp9', '-b:v', `${qa.bitrate}k`, '-maxrate', `${qa.maxrate}k`,
+      '-bufsize', `${qa.bufsize}k`, '-pix_fmt', 'yuv420p', '-row-mt', '1', '-cpu-used', '2')
+  } else {
+    args.push('-c:v', enc.encoder)
+    if (enc.encoder === 'libx264' || enc.encoder === 'libx265') {
+      const presets = { original: 'slow', high: 'slow', balanced: 'medium', small: 'fast', custom: 'medium' }
+      args.push('-preset', presets[options.quality] || 'medium')
+    } else if (enc.encoder.includes('nvenc')) {
+      args.push('-rc', 'vbr', '-preset', 'p6', '-tune', 'hq', '-multipass', 'qres')
+    } else if (enc.encoder.includes('qsv')) {
+      args.push('-preset', 'medium')
+    } else if (enc.encoder.includes('amf')) {
+      args.push('-quality', 'quality')
+    }
+    // pix_fmt yuv420p để tương thích mọi trình phát
+    args.push('-pix_fmt', 'yuv420p')
+    args.push('-b:v', `${qa.bitrate}k`)
+    args.push('-maxrate', `${qa.maxrate}k`)
+    args.push('-bufsize', `${qa.bufsize}k`)
   }
-  // pix_fmt yuv420p để tương thích mọi trình phát
-  args.push('-pix_fmt', 'yuv420p')
-  args.push('-b:v', `${qa.bitrate}k`)
-  args.push('-maxrate', `${qa.maxrate}k`)
-  args.push('-bufsize', `${qa.bufsize}k`)
 
   // 9g. Audio — copy khi không ghép, re-encode khi concat/avs/fade (đồng bộ chuẩn)
-  if (useConcat || subPlan.type === 'avs' || audioFaded) {
+  if (isWebM) {
+    if (mainMeta.hasAudio) args.push('-c:a', 'libopus', '-b:a', '128k')
+  } else if (useConcat || subPlan.type === 'avs' || audioFaded) {
     args.push('-c:a', 'aac', '-b:a', '192k', '-ar', '48000')
   } else if (mainMeta.hasAudio) {
     args.push('-c:a', 'copy')
@@ -886,14 +897,27 @@ async function exportTrimClip(options, events) {
   // Độ chính xác frame: decode lại toàn bộ (seek input nhanh + accurate_seek mặc định)
   args.push('-map', '0:v:0')
   if (meta.hasAudio) args.push('-map', '0:a:0')
-  args.push('-c:v', encoder)
-  if (encoder === 'libx264' || encoder === 'libx265') args.push('-preset', 'slow')
-  else if (encoder.includes('nvenc')) args.push('-rc', 'vbr', '-preset', 'p6', '-tune', 'hq')
-  else if (encoder.includes('qsv')) args.push('-preset', 'medium')
-  else if (encoder.includes('amf')) args.push('-quality', 'quality')
+  // WebM chỉ nhận VP8/VP9/AV1 + Vorbis/Opus — ép H.264/AAC sẽ fail exit -22,
+  // không tạo được file. Xem giải thích ở buildRenderCommand (9f).
+  const clipIsWebM = path.extname(options.outputPath || '').toLowerCase() === '.webm'
+  if (clipIsWebM) {
+    args.push('-c:v', 'libvpx-vp9', '-row-mt', '1', '-cpu-used', '2')
+  } else {
+    args.push('-c:v', encoder)
+    if (encoder === 'libx264' || encoder === 'libx265') args.push('-preset', 'slow')
+    else if (encoder.includes('nvenc')) args.push('-rc', 'vbr', '-preset', 'p6', '-tune', 'hq')
+    else if (encoder.includes('qsv')) args.push('-preset', 'medium')
+    else if (encoder.includes('amf')) args.push('-quality', 'quality')
+  }
   args.push('-pix_fmt', 'yuv420p')
   args.push('-b:v', `${qa.bitrate}k`, '-maxrate', `${qa.maxrate}k`, '-bufsize', `${qa.bufsize}k`)
-  if (meta.hasAudio) args.push('-c:a', 'aac', '-b:a', '192k')
+  if (meta.hasAudio) {
+    args.push('-c:a', clipIsWebM ? 'libopus' : 'aac', '-b:a', clipIsWebM ? '128k' : '192k')
+    // Chặn đỉnh âm thanh về -1.5 dBFS để Facebook không méo tiếng khi re-encode.
+    // 0.8413 = 10^(-1.5/20). Facebook chuẩn hóa về -14 LUFS (~-6.5 dB) rồi nén lại;
+    // đỉnh vượt 0 dBFS bị méo thành tiếng "rè" dù nghe trên VLC thấy bình thường.
+    args.push('-af', 'alimiter=limit=0.8413:level=disabled:latency=true')
+  }
   const ext = path.extname(options.outputPath || '').toLowerCase()
   if (['.mp4', '.mov', '.m4v'].includes(ext)) args.push('-movflags', '+faststart')
   args.push(options.outputPath)

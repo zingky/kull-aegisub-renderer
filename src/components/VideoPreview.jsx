@@ -10,11 +10,23 @@ import { basename } from '../utils/format'
 const fileUrl = (p) => 'file:///' + String(p).replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/')
 
 /**
+ * Chuẩn hoá fps về số nguyên chuẩn dùng cho ĐẾM FRAME.
+ * File thực tế hay là 23.976 (24000/1001) hoặc 29.97 — làm tròn tới số nguyên
+ * gần nhất cho khớp với cách trình chơi/editor đếm frame (24, 30).
+ * Trả về 24 khi fps thiếu/0/NaN để không bao giờ chia cho 0.
+ */
+export function fpsRounded(fps) {
+  const f = Number(fps)
+  if (!isFinite(f) || f <= 0) return 24
+  return Math.max(1, Math.round(f))
+}
+
+/**
  * VideoPreview — Khung preview hardsub + Trim A→B (v2.0)
  * Nằm trọn vẹn trong Cột 3 (Xem trước & Cắt đoạn A→B)
  * Preview phụ đề: ffmpeg render frame (libass) — không WebGL/WASM, không màn đen.
  */
-export default function VideoPreview({ videoPath, subPath, subName, meta, status, outputPath, lang, t, engine = 'libass' }) {
+export default function VideoPreview({ videoPath, subPath, subName, meta, status, outputPath, outputFormat, lang, t, engine = 'libass' }) {
   const videoRef = useRef(null)
   const timelineRef = useRef(null)
   const thumbsDirRef = useRef(null)
@@ -54,6 +66,18 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
     if (!isFinite(s) || s < 0) s = 0
     const m = Math.floor(s / 60), sec = Math.floor(s % 60), d = Math.floor((s % 1) * 10)
     return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}.${d}`
+  }
+
+  // Đồng hồ dạng non-drop S:FF (giây:frame) — làm rõ "1 frame" là 1 frame.
+  // Dùng fps đã làm tròn về số nguyên chuẩn (23.976→24, 29.97→30) vì bộ đếm
+  // frame trong trình chơi cũng vậy; giữ nguyên fps lẻ sẽ ra 0/1..46 rối tung.
+  const fmtFrame = (s) => {
+    if (!isFinite(s) || s < 0) s = 0
+    const f = fpsRounded(fps)
+    const total = Math.round(s * f)
+    const sec = Math.floor(total / f)
+    const frame = total - sec * f
+    return `${String(sec).padStart(2, '0')}:${String(frame).padStart(2, '0')}`
   }
 
   // Reset khi đổi video
@@ -240,6 +264,28 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
     v.currentTime = Math.max(0, Math.min(d, s))
     setCur(v.currentTime)
   }
+  // ── Nút "1 frame": BẮT BUỘC làm việc trên CHỈ SỐ FRAME NGUYÊN ──
+  // Lỗi cũ: step(1/fps) cộng trừ số thực vào video.currentTime →
+  //   • file 23.976fps (24000/1001) cho 1/fps = 0.041708… cộng dồn lỗi float
+  //   • currentTime bị browser snap về frame gần nhất, đọc lại đã tròn → lệch ngay
+  //   • fmt() chỉ in 0.1s nên 1 frame (0.042s) hiện thành 0.0 rồi nhảy 0.1s
+  // Sửa: quy đổi currentTime → chỉ số frame (làm tròn), cộng/trừ 1, rồi ngược lại.
+  // Như vậy mỗi lần bấm luôn lệch đúng 1 frame, không tích luỹ sai số.
+  const frameStep = (dir) => {
+    const v = videoRef.current
+    if (!v) return
+    // fps có thể 0/NaN nếu probe lỗi → chặn để không chia ra Infinity
+    const f = Number(fps) > 0 ? Number(fps) : 24
+    const idx = Math.round((v.currentTime || 0) * f) + dir
+    const d = duration || v.duration || 0
+    // Chặn biên TRƯỚC khi chia: Math.round làm tròn nửa lên, nên ở frame 0
+    // (0.1s × 24 = 2.4 → 2) lùi 1 sẽ ra frame 1 tức là NHẢY TỚI chứ không lùi.
+    // Chặn idx <= 0 (tiến) / idx >= last (lùi) giữ đúng bờ.
+    if (idx <= 0) return seek(0)
+    const last = Math.ceil(d * f)
+    if (idx >= last) return seek(d)
+    seek(idx / f)
+  }
   const step = (delta) => seek((videoRef.current?.currentTime || 0) + delta)
   const togglePlay = () => {
     const v = videoRef.current
@@ -308,13 +354,20 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
       : (trim.end - trim.start > 0.1 ? [{ start: trim.start, end: trim.end }] : [])
     if (!list.length) return
     const base = String(outputPath || '').replace(/\.[^.]+$/, '') || 'clip'
-    const srcExt = (String(videoPath).match(/\.([^\\.\\/:*?"<>|]+)$/) || [])[1] || 'mp4'
+    // BUG CŨ: lấy đuôi từ FILE GỐC (srcExt) → file .mkv ra .mkv dù user đã chọn MP4.
+    // Đuôi file xuất phải theo ĐỊNH DẠNG ĐÃ CHỌN, không theo file nguồn.
+    // outputPath do App.jsx dựng sẵn bằng withExt(..., outputFormat) nên đã đúng đuôi;
+    // vẫn fallback theo outputFormat, và cuối cùng mới về đuôi gốc.
+    const extOut = (String(outputFormat || '').replace(/^\./, '') ||
+      (String(outputPath || '').match(/\.([^\\.\\/:*?"<>|]+)$/) || [])[1] ||
+      (String(videoPath).match(/\.([^\\.\\/:*?"<>|]+)$/) || [])[1] || 'mp4'
+    ).toLowerCase()
     for (let i = 0; i < list.length; i++) {
       setEx({ i: i + 1, n: list.length, pct: 0 })
       try {
         await window.renderAPI.startTrim({
           mainVideo: videoPath,
-          outputPath: `${base}_clip${i + 1}.${srcExt.toLowerCase()}`,
+          outputPath: `${base}_clip${i + 1}.${extOut}`,
           trim: { start: list[i].start, end: list[i].end },
           lang,
         })
@@ -455,13 +508,13 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
           <Btn onClick={() => seek(0)} title={t('pv.toStart')}><SkipBack className="w-3.5 h-3.5" /></Btn>
           <Btn onClick={() => step(-5)} title="-5s"><ChevronsLeft className="w-3.5 h-3.5" /></Btn>
           <Btn onClick={() => step(-1)} title="-1s"><ChevronLeft className="w-3.5 h-3.5" /></Btn>
-          <Btn onClick={() => step(-1 / fps)} title="-1 frame">
+          <Btn onClick={() => frameStep(-1)} title={t('pv.frameBack')}>
             <span className="text-[9px] font-bold leading-none select-none tracking-tighter">◀|</span>
           </Btn>
           <Btn onClick={togglePlay} title="Play/Pause (Space)" primary>
             {playing ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
           </Btn>
-          <Btn onClick={() => step(1 / fps)} title="+1 frame">
+          <Btn onClick={() => frameStep(1)} title={t('pv.frameFwd')}>
             <span className="text-[9px] font-bold leading-none select-none tracking-tighter">|▶</span>
           </Btn>
           <Btn onClick={() => step(1)} title="+1s"><ChevronRight className="w-3.5 h-3.5" /></Btn>
@@ -471,6 +524,9 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
         <div id="pv-time" className="text-[11px] font-mono leading-none">
           <span className={inTrim ? 'text-emerald-400' : 'text-slate-500'}>{fmt(cur)}</span>
           <span className="text-slate-600"> / {fmt(duration)}</span>
+          {/* Đồng hồ frame: fmt() chỉ in 0.1s mà 1 frame = 0.042s (23.976fps) nên
+              không có nó thì không thể phân biệt "1 frame" với "0.1s" khi nhìn. */}
+          <span className="text-slate-600"> · {fmtFrame(cur)}</span>
         </div>
       </div>
 

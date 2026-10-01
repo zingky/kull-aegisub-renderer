@@ -15,16 +15,16 @@ Desktop app that **burns (hardsubs) ASS/SRT subtitles into video** — **Electro
 
 ## 📥 Prebuilt download (no installation)
 
-All builds on [Releases](https://github.com/zingky/kull-aegisub-renderer/releases/tag/v2.0.1). Two options:
+All builds on [Releases](https://github.com/zingky/kull-aegisub-renderer/releases/tag/v2.0.2). Two options:
 
 | Build | Size | Startup | Notes |
 |---|---|---|---|
-| **[ZIP - win-x64](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.1/KullAegisubRenderer-2.0.1-win-x64.zip)** ⭐ | ~194 MB | **~0.4 s** | Fastest — extract once, then run |
-| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.1/KullAegisubRenderer-2.0.1-portable.exe)** | ~130 MB | 6-12 s | Single file, easy to carry around |
+| **[ZIP - win-x64](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.2/KullAegisubRenderer-2.0.2-win-x64.zip)** ⭐ | ~192 MB | **~0.4 s** | Fastest — extract once, then run |
+| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.2/KullAegisubRenderer-2.0.2-portable.exe)** | ~130 MB | 6-12 s | Single file, easy to carry around |
 
 ### How to use the ZIP build (recommended)
 
-1. Download `KullAegisubRenderer-2.0.1-win-x64.zip` → right-click → **Extract All…** into any folder (e.g. `D:\KullAegisubRenderer`).
+1. Download `KullAegisubRenderer-2.0.2-win-x64.zip` → right-click → **Extract All…** into any folder (e.g. `D:\KullAegisubRenderer`).
 2. Open that folder and run **`Kull Aegisub Renderer.exe`**.
 3. On first launch SmartScreen may warn (unsigned app) → **More info → Run anyway**. Afterwards it opens in ~0.4 s.
 
@@ -39,6 +39,16 @@ Just double-click the exe — no install, no registry changes, delete the file t
 - Requires **Windows 10/11 64-bit**. Bundled toolkit: `ffmpeg`, `ffprobe`, `AviSynth.dll`, `VSFilterMod.dll`, `VSFilter.dll`, `DirectShowSource.dll`.
 
 ---
+
+## 🐛 Fixed in 2.0.2
+
+- **No more “buzzing” distortion on Facebook**: the A→B clip used to peak above 0 dBFS (True Peak +1.4 dBFS), so Facebook normalised then re-compressed it and clipped the peaks. The engine now caps the peak at **−1.5 dBFS** when exporting the clip (both MP4 and WebM).
+- **WebM export works now**: choosing `.webm` used to make FFmpeg fail with exit `-22` (no file created) because it was forced into H.264/AAC — both the main render and the clip now use **VP9 + Opus**.
+- **A→B clip extension follows the selected format**: it used to take the extension from the **source file**, so picking MP4 while the source was `.mkv` still produced `.mkv`.
+- **Accurate “1 frame” step buttons**: they used to add `1/fps` (a float) and drift; now they step on the **integer frame index** and show the **frame number** next to the clock.
+- **Accurate GPU encoder detection**: the app used to report “AMF/QSV available” just from the encoder list, even when `amfrt64.dll` was missing → the render died mid-way. It now **does a real 256×256 test encode** before reporting support.
+- **Output file size / ETA / render time**: fixed parsing FFmpeg 9’s size line (it uses `KiB`/`MiB`, not `kB`/`MB`), steadier ETA, and the log now reports the **real render time**.
+- **Preview auto-stops when rendering**: if a preview is playing when you press render, it stops → no CPU contention.
 
 ## 🐛 Fixed in 2.0.1
 
@@ -97,7 +107,7 @@ npm run dist         # → release/KullAegisubRenderer-<version>-portable.exe  (
 ### Updating the Release body
 
 ```bash
-node scripts/setReleaseNotes.js docs/release-notes-v2.0.1.md v2.0.1
+node scripts/setReleaseNotes.js docs/release-notes-v2.0.2.md v2.0.2
 ```
 
 > ⚠️ **Never write release notes with PowerShell.** PowerShell 5 reads a BOM-less `.ps1` as ANSI (CP1252), so non-ASCII text is already corrupted before it reaches GitHub. The Node script above reads/writes proper UTF-8 and then **re-fetches the release and compares hashes** to prove the body matches the source file.
@@ -147,7 +157,7 @@ Quick check: `npm run check:bin`
 ```
 electron/   main.js (IPC) · preload.js · ffmpegEngine.js (core engine) · i18n.js · paths.js
 src/        App.jsx · i18n.js (VI/EN dictionaries) · components/ (8 UI + LangSwitch + ErrorBoundary) · utils/
-scripts/    checkBin · e2eTest · repro-select · checkI18n · checkRows · checkQuality · test-vsfilter · test-vsfm-effects · test-avs-seek · test-avs-dlls · zipRenderTest · afterPackIcon · setReleaseNotes
+scripts/    checkBin · e2eTest · repro-select · checkI18n · checkRows · checkQuality · test-vsfilter · test-vsfm-effects · test-avs-seek · test-avs-dlls · test-encoder-probe · test-frame-step · test-output-format · test-clip-audio · check-asar · zipRenderTest · afterPackIcon · setReleaseNotes
 bin/        ffmpeg · ffprobe · AviSynth.dll · VSFilter*.dll · avsplugins/
 ```
 
