@@ -61,6 +61,9 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
   const [videoSize, setVideoSize] = useState({ w: meta?.width || 0, h: meta?.height || 0 })
   const [ex, setEx] = useState(null) // {i, n, pct} khi đang xuất clip A→B
   const [exDone, setExDone] = useState(false)
+  // Bước tua mà mũi tên ←/→ sẽ dùng. Bấm nút tua nào thì GHI NHỚ bước đó để mũi tên
+  // dùng lại; chưa bấm gì → mặc định 1 giây. kind 'frame' đi theo chỉ số frame nguyên.
+  const [stepMode, setStepMode] = useState({ kind: 'sec', size: 1 })
 
   const fmt = (s) => {
     if (!isFinite(s) || s < 0) s = 0
@@ -287,23 +290,40 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
     seek(idx / f)
   }
   const step = (delta) => seek((videoRef.current?.currentTime || 0) + delta)
+  // Nút tua → tua NGAY và GHI NHỚ bước để mũi tên ←/→ dùng lại ("1 frame" đi qua
+  // frameStep nên vẫn theo chỉ số frame nguyên, không tích luỹ sai số).
+  const seekStep = (kind, size, dir) => {
+    setStepMode({ kind, size })
+    if (kind === 'frame') frameStep(dir * size)
+    else step(dir * size)
+  }
+  // Mũi tên ←/→: tua theo BƯỚC ĐANG CHỌN (mặc định 1s). Shift giữ lối tắt ±5s cũ.
+  const stepByArrow = (dir, big) => {
+    if (big) step(dir * 5)
+    else if (stepMode.kind === 'frame') frameStep(dir * stepMode.size)
+    else step(dir * stepMode.size)
+  }
+  // Nhãn bước đang chọn → hiện cho user biết mũi tên sẽ tua bao nhiêu
+  const stepLabel = stepMode.kind === 'frame' ? `${stepMode.size} frame` : `${stepMode.size}s`
   const togglePlay = () => {
     const v = videoRef.current
     if (!v) return
     if (v.paused) v.play().catch(() => {}); else v.pause()
   }
 
-  // Keyboard: Space play/pause, ←/→ ±1s, Shift+←/→ ±5s
+  // Keyboard: Space play/pause · ←/→ tua theo BƯỚC ĐANG CHỌN (nút vừa bấm; mặc định 1s)
+  //   Bấm nút "1 frame" rồi thì ←/→ nhảy đúng 1 frame; bấm "+5s" thì ←/→ nhảy 5s.
+  //   Shift+←/→ vẫn là lối tắt ±5s như trước.
   useEffect(() => {
     const onKey = (e) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return
       if (e.code === 'Space') { e.preventDefault(); togglePlay() }
-      else if (e.code === 'ArrowLeft') step(e.shiftKey ? -5 : -1)
-      else if (e.code === 'ArrowRight') step(e.shiftKey ? 5 : 1)
+      else if (e.code === 'ArrowLeft') { e.preventDefault(); stepByArrow(-1, e.shiftKey) }
+      else if (e.code === 'ArrowRight') { e.preventDefault(); stepByArrow(1, e.shiftKey) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [duration])
+  }, [duration, fps, stepMode])
 
   // Timeline: click seek + kéo marker A/B
   const timeFromEvent = (e) => {
@@ -506,20 +526,23 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
       <div id="pv-controls" className={clsx('flex flex-col items-center gap-1 shrink-0 text-slate-300', !videoPath && 'opacity-40 pointer-events-none')}>
         <div id="pv-btns" className="flex items-center justify-center gap-1 flex-wrap">
           <Btn onClick={() => seek(0)} title={t('pv.toStart')}><SkipBack className="w-3.5 h-3.5" /></Btn>
-          <Btn onClick={() => step(-5)} title="-5s"><ChevronsLeft className="w-3.5 h-3.5" /></Btn>
-          <Btn onClick={() => step(-1)} title="-1s"><ChevronLeft className="w-3.5 h-3.5" /></Btn>
-          <Btn onClick={() => frameStep(-1)} title={t('pv.frameBack')}>
+          <Btn onClick={() => seekStep('sec', 5, -1)} title="-5s" active={stepMode.kind === 'sec' && stepMode.size === 5}><ChevronsLeft className="w-3.5 h-3.5" /></Btn>
+          <Btn onClick={() => seekStep('sec', 1, -1)} title="-1s" active={stepMode.kind === 'sec' && stepMode.size === 1}><ChevronLeft className="w-3.5 h-3.5" /></Btn>
+          <Btn onClick={() => seekStep('frame', 1, -1)} title={t('pv.frameBack')} active={stepMode.kind === 'frame'}>
             <span className="text-[9px] font-bold leading-none select-none tracking-tighter">◀|</span>
           </Btn>
           <Btn onClick={togglePlay} title="Play/Pause (Space)" primary>
             {playing ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
           </Btn>
-          <Btn onClick={() => frameStep(1)} title={t('pv.frameFwd')}>
+          <Btn onClick={() => seekStep('frame', 1, 1)} title={t('pv.frameFwd')} active={stepMode.kind === 'frame'}>
             <span className="text-[9px] font-bold leading-none select-none tracking-tighter">|▶</span>
           </Btn>
-          <Btn onClick={() => step(1)} title="+1s"><ChevronRight className="w-3.5 h-3.5" /></Btn>
-          <Btn onClick={() => step(5)} title="+5s"><ChevronsRight className="w-3.5 h-3.5" /></Btn>
+          <Btn onClick={() => seekStep('sec', 1, 1)} title="+1s" active={stepMode.kind === 'sec' && stepMode.size === 1}><ChevronRight className="w-3.5 h-3.5" /></Btn>
+          <Btn onClick={() => seekStep('sec', 5, 1)} title="+5s" active={stepMode.kind === 'sec' && stepMode.size === 5}><ChevronsRight className="w-3.5 h-3.5" /></Btn>
           <Btn onClick={() => seek(duration)} title={t('pv.toEnd')}><SkipForward className="w-3.5 h-3.5" /></Btn>
+        </div>
+        <div id="pv-step-hint" className="text-[10px] font-sans text-slate-500" title={t('pv.stepModeTip')}>
+          {'← → '}{t('pv.stepMode', { step: stepLabel })}
         </div>
         <div id="pv-time" className="text-[11px] font-mono leading-none">
           <span className={inTrim ? 'text-emerald-400' : 'text-slate-500'}>{fmt(cur)}</span>
@@ -630,7 +653,7 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
   )
 }
 
-function Btn({ onClick, title, children, primary, className }) {
+function Btn({ onClick, title, children, primary, active, className }) {
   return (
     <button
       onClick={onClick}
@@ -640,6 +663,8 @@ function Btn({ onClick, title, children, primary, className }) {
         primary
           ? 'bg-emerald-600 hover:bg-emerald-500 border-emerald-500 text-white'
           : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300',
+        // Nút tua đang được chọn → viền xanh để user biết mũi tên ←/→ sẽ tua bước này
+        active && 'border-emerald-400 text-emerald-300 ring-1 ring-emerald-400/60',
         className
       )}
     >

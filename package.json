@@ -23,7 +23,8 @@
     "dist": "npm run build && electron-builder",
     "test:asar": "node scripts/check-asar.js",
     "test:format": "node scripts/test-output-format.js",
-    "test:clip-audio": "node scripts/test-clip-audio.js"
+    "test:clip-audio": "node scripts/test-clip-audio.js",
+    "test:arrow-step": "node scripts/test-arrow-step.js"
   },
   "dependencies": {
     "clsx": "^2.1.1",

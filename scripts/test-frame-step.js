@@ -99,9 +99,52 @@ console.log('\n[6] Source: nút frame phải gọi frameStep()')
 const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'components', 'VideoPreview.jsx'), 'utf8')
 ok(!/step\(\s*[-+]\s*1\s*\/\s*fps\s*\)/.test(src), 'không còn step(±1/fps) — cộng số thực đã bị gỡ')
 ok(/const frameStep = \(dir\)/.test(src), 'frameStep(dir) được định nghĩa')
-ok((src.match(/frameStep\((-?\d)\)/g) || []).length === 2, 'cả 2 nút đều gọi frameStep()')
+ok(/if \(kind === 'frame'\) frameStep\(dir \* size\)/.test(src), 'seekStep chế độ frame đi qua frameStep() (chỉ số frame nguyên)')
 ok(/Math\.round\(\(v\.currentTime \|\| 0\) \* f\) \+ dir/.test(src), 'dùng chỉ số frame nguyên (Math.round) làm chuẩn')
 ok(/fmtFrame/.test(src), 'có đồng hồ frame S:FF để nhìn thấy 1 frame')
+
+// ── 7. Bước tua cho mũi tên ←/→: theo NÚT VỪA BẤM, mặc định 1 giây ──
+//   Mô phỏng ĐÚNG logic seekStep()/stepByArrow() trong VideoPreview.jsx.
+console.log('\n[7] Mũi tên ←/→ tua theo bước đang chọn (mặc định 1 giây)')
+const applyStep = (mode, dir, curTime, fpsV, dur) => {
+  if (mode.kind === 'frame') return stepTarget(curTime, dir * mode.size, fpsV, dur)
+  const target = (curTime || 0) + dir * mode.size
+  return Math.max(0, Math.min(dur || 0, target))
+}
+const DEFAULT_MODE = { kind: 'sec', size: 1 }
+ok(DEFAULT_MODE.kind === 'sec' && DEFAULT_MODE.size === 1, 'chưa bấm nút nào → mặc định 1 giây')
+ok(Math.abs(applyStep(DEFAULT_MODE, 1, 10, 24, 600) - 11) < 1e-9, 'mặc định → → nhảy +1s')
+ok(Math.abs(applyStep(DEFAULT_MODE, -1, 10, 24, 600) - 9) < 1e-9, 'mặc định → ← lùi -1s')
+ok(Math.abs(applyStep({ kind: 'sec', size: 5 }, 1, 10, 24, 600) - 15) < 1e-9, 'bấm +5s → mũi tên nhảy 5s')
+ok(Math.abs(applyStep({ kind: 'sec', size: 5 }, -1, 10, 24, 600) - 5) < 1e-9, 'bấm -5s → mũi tên lùi 5s')
+{
+  const mode = { kind: 'frame', size: 1 }
+  let t2 = 10
+  for (let i = 0; i < 10; i++) t2 = applyStep(mode, 1, t2, 24, 600)
+  ok(Math.abs(t2 - (10 + 10 / 24)) < 1e-9, `bấm 1 frame → 10 lần → đúng +10 frame (t=${t2.toFixed(4)}s)`)
+  ok(t2 - 10 < 1, 'bước frame KHÔNG bị hiểu thành giây (10 lần < 1 giây)')
+}
+ok(applyStep({ kind: 'sec', size: 5 }, 1, 598, 24, 600) === 600, 'chặn biên: +5s sát cuối không vượt duration')
+ok(applyStep({ kind: 'frame', size: 1 }, -1, 0, 24, 600) === 0, 'chặn biên: lùi frame ở frame 0 vẫn giữ 0')
+
+// ── 8. Source: nút tua ghi nhớ bước, mũi tên dùng lại ──
+console.log('\n[8] Source: nút tua ghi nhớ bước + mũi tên dùng đúng bước')
+const vpSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'components', 'VideoPreview.jsx'), 'utf8')
+ok(/const \[stepMode, setStepMode\] = useState\(\{ kind: 'sec', size: 1 \}\)/.test(vpSrc), 'có state stepMode, mặc định 1 giây')
+ok(/const seekStep = \(kind, size, dir\)/.test(vpSrc), 'có seekStep(kind, size, dir) — bấm nút ghi nhớ bước')
+ok(/const stepByArrow = \(dir, big\)/.test(vpSrc), 'có stepByArrow(dir, big) — mũi tên dùng bước đang chọn')
+ok(/ArrowLeft'\) \{ e\.preventDefault\(\); stepByArrow\(-1, e\.shiftKey\) \}/.test(vpSrc), '← gọi stepByArrow(-1, shift)')
+ok(/ArrowRight'\) \{ e\.preventDefault\(\); stepByArrow\(1, e\.shiftKey\) \}/.test(vpSrc), '→ gọi stepByArrow(1, shift)')
+ok(!/step\(e\.shiftKey \? -5 : -1\)/.test(vpSrc), 'đã bỏ mũi tên cứng ±1s cũ')
+ok(/seekStep\('frame', 1, -1\)/.test(vpSrc) && /seekStep\('frame', 1, 1\)/.test(vpSrc), '2 nút frame → seekStep(frame,1,±1)')
+ok(/seekStep\('sec', 1, -1\)/.test(vpSrc) && /seekStep\('sec', 1, 1\)/.test(vpSrc), '2 nút 1s → seekStep(sec,1,±1)')
+ok(/seekStep\('sec', 5, -1\)/.test(vpSrc) && /seekStep\('sec', 5, 1\)/.test(vpSrc), '2 nút 5s → seekStep(sec,5,±1)')
+ok(/\[duration, fps, stepMode\]/.test(vpSrc), 'effect bàn phím phụ thuộc stepMode (luôn dùng bước mới nhất)')
+ok(/pv\.stepMode/.test(vpSrc) && /stepLabel/.test(vpSrc), 'UI hiện nhãn bước tua (pv.stepMode + stepLabel)')
+ok(/active=\{stepMode\.kind/.test(vpSrc), 'nút đang chọn được highlight (prop active)')
+const i18nSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'i18n.js'), 'utf8')
+ok((i18nSrc.match(/'pv\.stepMode':/g) || []).length === 2, 'khoá pv.stepMode có ở cả VI + EN')
+ok((i18nSrc.match(/'pv\.stepModeTip':/g) || []).length === 2, 'khoá pv.stepModeTip có ở cả VI + EN')
 
 console.log(failed === 0 ? '\n✅ PASS' : `\n❌ FAIL (${failed})`)
 process.exit(failed === 0 ? 0 : 1)
