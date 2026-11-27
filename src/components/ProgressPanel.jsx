@@ -4,6 +4,8 @@ import { formatEta } from '../utils/format'
 
 export default function ProgressPanel({ status, progress, outputPath, elapsed, t }) {
   const pct = Math.round(progress.pct * 10) / 10
+  // Chưa có mốc tiến độ nào (đang probe / ffmpeg khởi động) → thanh chạy "chờ" thay vì đứng 0%
+  const starting = !(pct > 0)
 
   if (status === 'running') {
     return (
@@ -13,13 +15,19 @@ export default function ProgressPanel({ status, progress, outputPath, elapsed, t
             <Loader2 className="w-3 h-3 animate-spin text-amber-400" />
             {t('pg.rendering')}
           </span>
-          <span className="font-mono font-bold text-amber-300">{pct.toFixed(1)}%</span>
+          <span className="font-mono font-bold text-amber-300">
+            {starting ? t('pg.starting') : `${pct.toFixed(1)}%`}
+          </span>
         </div>
         <div className="h-2 rounded-full bg-slate-800 overflow-hidden border border-slate-700/60">
-          <div
-            className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-[width] duration-300"
-            style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
-          />
+          {starting ? (
+            <div className="h-full w-full bg-gradient-to-r from-transparent via-amber-400/60 to-transparent animate-pulse" />
+          ) : (
+            <div
+              className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-[width] duration-300"
+              style={{ width: `${Math.max(0, Math.min(100, pct))}%` }}
+            />
+          )}
         </div>
         <div className="mt-1 flex items-center gap-3 text-[11px] text-slate-400">
           <span className="flex items-center gap-1">

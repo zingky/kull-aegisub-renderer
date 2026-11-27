@@ -1,15 +1,15 @@
 {
   "name": "kull-aegisub-renderer",
   "productName": "Kull Aegisub Renderer",
-  "version": "2.0.3",
+  "version": "2.1.0",
   "description": "Desktop app that hardsubs ASS/SRT subtitles into video (Vietsub) with FFmpeg + VSFilter — Electron + React + TailwindCSS",
   "main": "electron/main.js",
   "author": "Kull Aegisub",
   "license": "MIT",
   "scripts": {
-    "dev": "concurrently -k -s first \"vite\" \"wait-on tcp:127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .\"",
+    "dev": "concurrently -k -s first \"vite\" \"wait-on tcp:127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 tauri dev\"",
     "build": "vite build",
-    "start": "npm run build && electron .",
+    "start": "npm run build && tauri start",
     "check:bin": "node scripts/checkBin.js",
     "test:e2e": "node scripts/e2eTest.js",
     "test:repro": "node scripts/repro-select.js",
@@ -21,18 +21,21 @@
     "test:enc-probe": "node scripts/test-encoder-probe.js",
     "test:frame-step": "node scripts/test-frame-step.js",
     "dist": "npm run build && electron-builder",
+    "tauri": "tauri",
     "test:asar": "node scripts/check-asar.js",
     "test:format": "node scripts/test-output-format.js",
     "test:clip-audio": "node scripts/test-clip-audio.js",
     "test:arrow-step": "node scripts/test-arrow-step.js"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.12.5",
     "clsx": "^2.1.1",
     "lucide-react": "^0.445.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.0.1",

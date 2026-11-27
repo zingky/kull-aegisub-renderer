@@ -5,9 +5,11 @@ import {
   SkipBack, SkipForward, Download, Plus, X, Loader2, Film, ExternalLink,
 } from 'lucide-react'
 import { basename } from '../utils/format'
+import renderAPI, { fileSrc } from '../renderAPI'
 
-// Đường dẫn file → URL an toàn (mã hoá space/#/?... — fix preview màn hình đen)
-const fileUrl = (p) => 'file:///' + String(p).replace(/\\/g, '/').split('/').map(encodeURIComponent).join('/')
+// Đường dẫn file cục bộ → URL xem được trong WebView.
+// Tauri: asset protocol (convertFileSrc) · Electron: file:///
+const fileUrl = (p) => fileSrc(p)
 
 /**
  * Chuẩn hoá fps về số nguyên chuẩn dùng cho ĐẾM FRAME.
@@ -97,11 +99,11 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
   // Thumbnail timeline
   useEffect(() => {
     let canceled = false
-    if (!videoPath || !window.renderAPI?.extractThumbs) return
-    if (thumbsDirRef.current) window.renderAPI.cleanupThumbs(thumbsDirRef.current)
+    if (!videoPath || !renderAPI?.extractThumbs) return
+    if (thumbsDirRef.current) renderAPI.cleanupThumbs(thumbsDirRef.current)
     thumbsDirRef.current = null
     setThumbs([])
-    window.renderAPI.extractThumbs(videoPath).then((res) => {
+    renderAPI.extractThumbs(videoPath).then((res) => {
       if (canceled || !res?.thumbs?.length) return
       thumbsDirRef.current = res.dir
       setThumbs(res.thumbs.map((x) => ({ t: x.t, url: fileUrl(x.file) })))
@@ -111,7 +113,7 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
 
   // dọn thumbnail khi unmount
   useEffect(() => () => {
-    if (thumbsDirRef.current && window.renderAPI?.cleanupThumbs) window.renderAPI.cleanupThumbs(thumbsDirRef.current)
+    if (thumbsDirRef.current && renderAPI?.cleanupThumbs) renderAPI.cleanupThumbs(thumbsDirRef.current)
   }, [])
 
   // ── Preview phụ đề: render frame bằng CHÍNH ffmpeg + libass (giống hệt bản render) ──
@@ -136,7 +138,7 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
       status !== 'running' && // render đang chạy → không sinh frame nào nữa
       videoPath && subPath && subsEnabled &&
       /\.(ass|ssa|srt)$/i.test(subPath || '') &&
-      window.renderAPI?.renderPreviewFrame
+      renderAPI?.renderPreviewFrame
     if (!enabled) return undefined
 
     let disposed = false
@@ -145,7 +147,7 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
       const seq = ++frameSeqRef.current
       const timeSec = Math.max(0, v.currentTime || 0)
       setFrameBusy(true)
-      window.renderAPI
+      renderAPI
         .renderPreviewFrame({ videoPath, subPath, timeSec, engine })
         .then((res) => {
           if (disposed || frameSeqRef.current !== seq) return
@@ -235,7 +237,7 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
     // dành trọn cho render chính. Effect preview ở trên đã tự tháo listener
     // (nhờ `status` trong deps + enabled=false) nên không còn frame nào sinh nữa.
     if (videoRef.current && !videoRef.current.paused) videoRef.current.pause()
-    window.renderAPI?.cancelPreviewFrame?.()
+    renderAPI?.cancelPreviewFrame?.()
   }, [status])
 
   // Con trỏ tiến độ mượt (rAF ~60fps) — timeupdate chỉ ~4Hz nên bị giật.
@@ -252,12 +254,17 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
     return () => cancelAnimationFrame(raf)
   }, [status])
 
-  // Nhận % tiến độ khi xuất clip A→B (cùng kênh render:progress)
+  // Nhận % tiến độ khi xuất clip A→B (kênh trim:event riêng)
   useEffect(() => {
-    const off = window.renderAPI?.onProgress?.((d) => {
+    const apply = (d) => {
       if (d && d.progress != null) setEx((p) => (p ? { ...p, pct: Math.round(d.progress) } : p))
-    })
-    return () => off?.()
+    }
+    const offTrim = renderAPI?.onTrimEvent
+      ? renderAPI.onTrimEvent((e) => {
+          if (e.type === 'progress') apply(e.data)
+        })
+      : renderAPI?.onProgress?.(apply) // fallback cho bản Electron cũ
+    return () => offTrim?.()
   }, [])
 
   const seek = (s) => {
@@ -367,7 +374,7 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
   const removeClip = (id) => setClips((p) => p.filter((c) => c.id !== id))
 
   const exportClips = async () => {
-    if (!window.renderAPI?.startTrim || status === 'running' || ex) return
+    if (!renderAPI?.startTrim || status === 'running' || ex) return
     // Chưa thêm clip nào → xuất luôn đoạn A→B đang chọn (khể nút hoạt động mọi lúc)
     const list = clips.length
       ? clips
@@ -382,29 +389,34 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
       (String(outputPath || '').match(/\.([^\\.\\/:*?"<>|]+)$/) || [])[1] ||
       (String(videoPath).match(/\.([^\\.\\/:*?"<>|]+)$/) || [])[1] || 'mp4'
     ).toLowerCase()
+    let allOk = true
     for (let i = 0; i < list.length; i++) {
       setEx({ i: i + 1, n: list.length, pct: 0 })
       try {
-        await window.renderAPI.startTrim({
+        await renderAPI.startTrim({
           mainVideo: videoPath,
           outputPath: `${base}_clip${i + 1}.${extOut}`,
-          trim: { start: list[i].start, end: list[i].end },
+          start: list[i].start,
+          end: list[i].end,
           lang,
         })
       } catch (e) {
-        break // lỗi giữa chừng → dừng, các clip đã xuất vẫn giữ nguyên
+        allOk = false // lỗi giữa chừng → dừng, chi tiết lỗi đã nằm ở Console Log
+        break
       }
     }
     setEx(null)
-    setExDone(true)
-    setTimeout(() => setExDone(false), 5000)
+    if (allOk) {
+      setExDone(true)
+      setTimeout(() => setExDone(false), 5000)
+    }
   }
 
   // ── Mở video + phụ đề bằng trình phát ngoài (VLC/MPV — libass native) ──
   const openExternal = async () => {
-    if (!videoPath || !window.renderAPI?.openInPlayer) return
+    if (!videoPath || !renderAPI?.openInPlayer) return
     try {
-      const res = await window.renderAPI.openInPlayer(
+      const res = await renderAPI.openInPlayer(
         videoPath,
         /\.(ass|ssa|srt)$/i.test(subPath || '') ? subPath : null
       )
@@ -510,11 +522,6 @@ export default function VideoPreview({ videoPath, subPath, subName, meta, status
                 draggable="false"
                 className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
               />
-            )}
-            {videoError && (
-              <div className="absolute inset-0 flex items-center justify-center text-center text-[11px] text-amber-300 bg-black/70 p-4">
-                {t('pv.codecFail')}
-              </div>
             )}
           </>
         )}

@@ -2,7 +2,7 @@
 
 [Tiếng Việt](./README.md) · **English**
 
-Desktop app that **burns (hardsubs) ASS/SRT subtitles into video** — **Electron + React + TailwindCSS**, render core powered by **FFmpeg + VSFilter (AviSynth+)**.
+Desktop app that **burns (hardsubs) ASS/SRT subtitles into video** — **Tauri + Rust + React + TailwindCSS**, render core powered by **FFmpeg + VSFilter (AviSynth+)**.
 
 
 ---
@@ -13,32 +13,28 @@ Desktop app that **burns (hardsubs) ASS/SRT subtitles into video** — **Electro
 
 ---
 
-## 📥 Prebuilt download (no installation)
+## 📥 Download (a single exe, nothing else)
 
-All builds on [Releases](https://github.com/zingky/kull-aegisub-renderer/releases/tag/v2.0.3). Two options:
+[Latest release](https://github.com/zingky/kull-aegisub-renderer/releases/latest) — download **one `.exe`**, no installer, no manual unzipping.
 
-| Build | Size | Startup | Notes |
-|---|---|---|---|
-| **[ZIP - win-x64](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.3/KullAegisubRenderer-2.0.3-win-x64.zip)** ⭐ | ~192 MB | **~0.4 s** | Fastest — extract once, then run |
-| **[Portable .exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.0.3/KullAegisubRenderer-2.0.3-portable.exe)** | ~130 MB | 6-12 s | Single file, easy to carry around |
+**[⬇️ Download KullAegisubRenderer-2.1.0.exe](https://github.com/zingky/kull-aegisub-renderer/releases/download/v2.1.0/KullAegisubRenderer-2.1.0.exe)** (~98 MB)
 
-### How to use the ZIP build (recommended)
+1. Double-click the downloaded file. On first launch SmartScreen may warn (unsigned app) → **More info → Run anyway**.
+2. **On first launch** the app extracts ffmpeg/ffprobe/AviSynth/VSFilter into `%LOCALAPPDATA%\Kull Aegisub Renderer` (~208 MB, a few seconds). Later launches are near-instant.
+3. The `.exe` can live anywhere (Desktop, USB stick, Downloads…) — the extracted data is shared, and no `bin/` folder needs to travel with it.
 
-1. Download `KullAegisubRenderer-2.0.3-win-x64.zip` → right-click → **Extract All…** into any folder (e.g. `D:\KullAegisubRenderer`).
-2. Open that folder and run **`Kull Aegisub Renderer.exe`**.
-3. On first launch SmartScreen may warn (unsigned app) → **More info → Run anyway**. Afterwards it opens in ~0.4 s.
-
-> ⚠️ **Do not run the exe directly inside the ZIP file.** Windows silently extracts it to `%TEMP%` on every launch (as slow as the portable build) and paths may break. Always extract to a folder first.
+> ✅ No FFmpeg/AviSynth/VSFilter installation needed. No registry changes. To uninstall: delete the exe and `%LOCALAPPDATA%\Kull Aegisub Renderer`.
 >
-> ⚠️ Keep every file in the extracted folder (the `.dll`s, `locales/`, `resources/`) — the app will not start if any is missing.
-
-### How to use the Portable build
-
-Just double-click the exe — no install, no registry changes, delete the file to uninstall. In exchange, every launch waits 6-12 s while it unpacks 510 MB into `%TEMP%`.
-
-- Requires **Windows 10/11 64-bit**. Bundled toolkit: `ffmpeg`, `ffprobe`, `AviSynth.dll`, `VSFilterMod.dll`, `VSFilter.dll`, `DirectShowSource.dll`.
+> 💡 Requires **Windows 10/11 64-bit** and **WebView2** (built into Windows 11; usually present on Windows 10 via Microsoft Edge).
 
 ---
+
+## ✨ What's new in 2.1.0
+
+- **Exactly one exe**: ffmpeg, ffprobe, AviSynth, VSFilter, VSFilterMod, DirectShowSource and WebView2Loader are embedded in the exe and extracted on first run. No more side-by-side `bin/` folder.
+- **No more CMD window**: the app runs as a GUI process and every ffmpeg/ffprobe/taskkill child is console-hidden.
+- **A→B clip export keeps audio**, shows progress % and writes detailed lines to the Console Log.
+- **More robust intro/outro merging**, including silent videos and dotted filenames (e.g. `East Of Eden [Full Ver.]`).
 
 ## ✨ What's new in 2.0.3
 

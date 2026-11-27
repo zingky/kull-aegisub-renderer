@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
-import { CheckCircle2, XCircle, AlertTriangle } from 'lucide-react'
+import { CheckCircle2, XCircle, AlertTriangle, Loader2 } from 'lucide-react'
 import appIcon from './assets/icon.ico'
 import DropZone from './components/DropZone'
 import EngineSelect from './components/EngineSelect'
@@ -15,8 +15,8 @@ import VideoPreview from './components/VideoPreview'
 import LangSwitch from './components/LangSwitch'
 import { useLang } from './i18n'
 import { basename, dirname, extname, stripExt, withExt, formatDuration, formatBytes, formatEta } from './utils/format'
+import renderAPI, { isElectron } from './renderAPI'
 
-const renderAPI = window.renderAPI
 let logId = 0
 
 // Bucket tiến độ lần cuối được ghi ra log (mỗi 5% ghi 1 dòng thống kê)
@@ -50,6 +50,8 @@ export default function App() {
   const [renderElapsed, setRenderElapsed] = useState(null)
   const [logs, setLogs] = useState([])
   const [binStatus, setBinStatus] = useState(null)
+  // Lần chạy đầu của bản 1 file exe: đang giải nén ffmpeg/ffprobe
+  const [binPreparing, setBinPreparing] = useState(true)
   const [version, setVersion] = useState('')
   const [resultPath, setResultPath] = useState('')
 
@@ -69,20 +71,28 @@ export default function App() {
   const fitWindowToCol1 = useCallback(() => {
     const box = col1Ref.current
     const inner = col1InnerRef.current
-    if (!box || !inner || typeof window.renderAPI?.fitWindowHeight !== 'function') return
+    if (!box || !inner || typeof renderAPI?.fitWindowHeight !== 'function') return
     const delta = Math.ceil(inner.getBoundingClientRect().height) - box.clientHeight
     // delta > 0: nội dung cao hơn khung nhìn → cửa sổ phải cao thêm
     // delta < 0: khung nhìn còn dư chỗ → thu cửa sổ lại cho vừa khít
     if (!delta || Math.abs(delta - lastFitRef.current) < 2) return
     lastFitRef.current = delta
-    window.renderAPI.fitWindowHeight(delta).catch(() => {})
+    renderAPI.fitWindowHeight(delta).catch(() => {})
   }, [])
 
   // ── Khởi tạo: kiểm tra bin, phiên bản, encoder + lắng nghe sự kiện render ──
   useEffect(() => {
-    renderAPI.checkBin().then(setBinStatus)
+    // init() có thể mất vài giây ở lần chạy đầu (giải nén ffmpeg) → mọi thứ phụ
+    // thuộc engine phải chờ init xong, nếu không detect encoder sẽ chạy khi engine chưa có.
+    renderAPI
+      .init()
+      .then(() => {
+        renderAPI.checkBin().then(setBinStatus).catch((e) => addLogRef.current(`❌ ${e}`, 'error'))
+        renderAPI.getEncoders().then(setAvailableEnc).catch(() => {})
+      })
+      .catch((e) => addLogRef.current(`❌ Không khởi tạo được engine: ${e}`, 'error'))
+      .finally(() => setBinPreparing(false))
     renderAPI.getAppVersion().then(setVersion)
-    renderAPI.getEncoders().then(setAvailableEnc).catch(() => {})
 
     const offs = [
       renderAPI.onProgress((d) => {
@@ -98,7 +108,7 @@ export default function App() {
         if (bucket > lastLoggedBucket && (d.frame != null || d.fps != null)) {
           lastLoggedBucket = bucket
           const bits = [
-            `⚡ ${pct}%`,
+            `⚡ ${pct.toFixed(1)}%`,
             d.frame != null ? `frame=${d.frame}` : null,
             d.fps != null ? `fps=${d.fps.toFixed(1)}` : null,
             d.speed != null ? `${tRef.current('stat.speed')}=${d.speed.toFixed(2)}×` : null,
@@ -111,6 +121,15 @@ export default function App() {
         }
       }),
       renderAPI.onLog((d) => addLogRef.current(d.line, d.level)),
+      // Xuất clip A→B: log vào Console Log (kênh riêng, không đổi trạng thái render)
+      renderAPI.onTrimEvent((e) => {
+        if (e.type === 'log') {
+          addLogRef.current(e.data.line, e.data.level)
+        } else if (e.type === 'error') {
+          addLogRef.current(`❌ ${e.data.message}`, 'error')
+          if (e.data.detail) addLogRef.current(e.data.detail, 'error')
+        }
+      }),
       renderAPI.onDone((d) => {
         if (d.canceled) {
           setStatus('idle')
@@ -130,7 +149,18 @@ export default function App() {
         if (d.detail) addLogRef.current(d.detail, 'error')
       }),
     ]
-    return () => offs.forEach((o) => o())
+
+    // Nếu không đăng ký được listener (thiếu quyền Tauri) → báo ngay trong Console Log
+    const onListenerError = (e) => {
+      const d = e?.detail || {}
+      addLogRef.current(`❌ Không nghe được sự kiện "${d.channel}": ${d.error}`, 'error')
+    }
+    window.addEventListener('kull:listener-error', onListenerError)
+
+    return () => {
+      offs.forEach((o) => o())
+      window.removeEventListener('kull:listener-error', onListenerError)
+    }
   }, [])
 
   // ── Canh chiều cao cửa sổ cho vừa khít Cột 1 ──
@@ -168,29 +198,62 @@ export default function App() {
       setFiles((f) => ({ ...f, [slot]: p }))
       if (slot === 'subtitle') {
         addLogRef.current(tRef.current('msg.pickedSub', { name }))
+        // Đọc chi tiết file phụ đề: format, encoding, số dòng thoại, style, font…
+        try {
+          const info = await renderAPI.subtitleInfo(p)
+          setMetas((m) => ({ ...m, [slot]: info }))
+          addLogRef.current(
+            tRef.current('msg.subInfo', {
+              name,
+              fmt: info.format,
+              enc: info.encoding,
+              res: info.playResX ? `${info.playResX}×${info.playResY}` : '—',
+              dlg: info.dialogues,
+              styles: (info.styles || []).length,
+              fonts: (info.fonts || []).slice(0, 4).join(', ') || '—',
+              first: formatDuration(info.firstSec),
+              last: formatDuration(info.lastSec),
+              size: formatBytes(info.sizeBytes),
+              path: p,
+            })
+          )
+        } catch (e) {
+          setMetas((m) => ({ ...m, [slot]: null }))
+          const errMsg = typeof e === 'string' ? e : (e?.message ?? String(e))
+          addLogRef.current(tRef.current('msg.subInfoFail', { name, msg: errMsg }), 'error')
+        }
         return
       }
       addLogRef.current(tRef.current('msg.probing', { name }))
+      // Luôn gán thư mục xuất + tên gợi ý ngay khi chọn video chính,
+      // KHÔNG chờ probeMedia thành công (probe có thể lỗi codec nhưng output vẫn cần điền sẵn)
+      if (slot === 'main') {
+        setOutputDir(dirname(p))
+        setOutputName(`${stripExt(name)}_exported`)
+      }
       try {
         const meta = await renderAPI.probeMedia(p, langRef.current)
         setMetas((m) => ({ ...m, [slot]: meta }))
+        const acodec = meta.hasAudio
+          ? `${(meta.audioCodec || '?').toUpperCase()} ${meta.sampleRate || ''}Hz ${meta.channels || 2}ch`
+          : tRef.current('msg.noAudio')
         addLogRef.current(
-          tRef.current('msg.probeOk', {
+          tRef.current('msg.videoInfo', {
             name,
             res: `${meta.width}×${meta.height}`,
             fps: meta.fps,
             dur: formatDuration(meta.duration),
+            vcodec: (meta.videoCodec || '?').toUpperCase(),
+            acodec,
             br: meta.bitrateAvg,
+            size: formatBytes(meta.sizeBytes),
+            path: p,
           })
         )
-        if (slot === 'main') {
-          setOutputDir(dirname(p))
-          // Tên gợi ý bỏ đuôi gốc — đuôi thật do nút Định dạng quyết định
-          setOutputName(`${stripExt(name)}_exported`)
-        }
       } catch (e) {
         setMetas((m) => ({ ...m, [slot]: null }))
-        addLogRef.current(tRef.current('msg.probeFail', { name, msg: e.message }), 'error')
+        const errMsg = typeof e === 'string' ? e : (e?.message ?? String(e))
+        addLogRef.current(tRef.current('msg.probeFail', { name, msg: errMsg }), 'error')
       }
     },
     []
@@ -199,6 +262,47 @@ export default function App() {
   const handleClear = useCallback((slot) => {
     setFiles((f) => ({ ...f, [slot]: null }))
     setMetas((m) => ({ ...m, [slot]: null }))
+  }, [])
+
+  // Tham chiếu mới nhất của handleFile cho listener native (kéo–thả file)
+  const handleFileRef = useRef(handleFile)
+  handleFileRef.current = handleFile
+
+  // ── Kéo–thả file trên Windows ──
+  // Tauri bắt sự kiện drag-drop ở tầng native (webview Windows không phát DOM drop),
+  // nên phải nghe tauri://drag-drop rồi tự xác định ô nào dưới con trỏ.
+  useEffect(() => {
+    if (isElectron) return undefined
+    let unlisten = null
+    let disposed = false
+    import('@tauri-apps/api/webview')
+      .then(({ getCurrentWebview }) =>
+        getCurrentWebview().onDragDropEvent((event) => {
+          const p = event && event.payload
+          if (!p || p.type !== 'drop') return
+          const paths = Array.isArray(p.paths) ? p.paths : []
+          if (!paths.length) return
+          const path = paths[0]
+          let slot = null
+          if (p.position) {
+            const dpr = window.devicePixelRatio || 1
+            const el = document.elementFromPoint(p.position.x / dpr, p.position.y / dpr)
+            const zone = el && el.closest ? el.closest('[data-dropzone-slot]') : null
+            if (zone) slot = zone.getAttribute('data-dropzone-slot')
+          }
+          if (!slot) slot = /\.(ass|ssa|srt|txt)$/i.test(path) ? 'subtitle' : 'main'
+          handleFileRef.current(slot, path)
+        })
+      )
+      .then((fn) => {
+        if (disposed) fn()
+        else unlisten = fn
+      })
+      .catch(() => {})
+    return () => {
+      disposed = true
+      if (unlisten) unlisten()
+    }
   }, [])
 
   const openFolder = async () => {
@@ -231,7 +335,7 @@ export default function App() {
   const handleStart = async () => {
     if (status === 'running') return
     if (!validate()) return
-    setLogs([])
+    // KHÔNG xóa log cũ: giữ thông tin video/phụ đề đã chọn, log render nối tiếp bên dưới
     lastLoggedBucket = -1
     setResultPath('')
     setProgress({ pct: 0, fps: null, speed: null, eta: null })
@@ -241,25 +345,25 @@ export default function App() {
       await renderAPI.startRender({
         mainVideo: files.main,
         subtitle: files.subtitle,
-        // Gửi rõ cờ ghép để engine không phải suy đoán (engine vẫn chấp nhận chỉ có file)
-        mergeEnabled: mergeEnabled,
         intro: mergeEnabled ? files.intro : null,
         outro: mergeEnabled ? files.outro : null,
-        subtitleEngine: engine,
+        engine,
         hardware,
         quality,
         custom,
-        // (A→B đã tách khỏi Render — chỉ nút "Xuất clip" dùng nó, không cắt chung khi render hardsub)
-        // Fade đầu/cuối — UI nhập ms, engine nhận giây (0.05–3s)
-        fades: { enabled: fadeEnabled, duration: Math.max(50, Math.min(3000, Number(fadeMs) || 100)) / 1000 },
-        // Ngôn ngữ UI → engine ghi log đúng ngôn ngữ đã chọn
+        mergeEnabled,
+        fadeEnabled,
+        fadeMs: Math.max(50, Math.min(3000, Number(fadeMs) || 100)),
         lang,
-        // Ép đuôi file xuất theo định dạng đã chọn (mp4/mkv/mov/webm/avi)
-        outputPath: withExt(`${outputDir}\\${outputName}`, `.${outputFormat}`),
+        outputDir,
+        outputName,
+        outputFormat,
+        trim: { enabled: false, start: 0, end: 0 },
       })
     } catch (e) {
       setStatus('error')
-      addLogRef.current(tRef.current('msg.startFail', { msg: e.message }), 'error')
+      const errMsg = typeof e === 'string' ? e : (e?.message ?? String(e))
+      addLogRef.current(tRef.current('msg.startFail', { msg: errMsg }), 'error')
     }
   }
 
@@ -296,25 +400,32 @@ export default function App() {
 
         <div className="hidden xl:flex items-center gap-1.5 text-[10px] font-medium shrink-0">
           <span className="text-slate-500 mr-1">bin/</span>
-          {[
-            ['ffmpeg', binStatus?.ffmpeg],
-            ['ffprobe', binStatus?.ffprobe],
-            ['AviSynth', binStatus?.avisynth],
-            ['VSFilterMod', binStatus?.vsfiltermod],
-            ['VSFilter', binStatus?.vsfilter],
-          ].map(([label, ok]) => (
-            <span
-              key={label}
-              title={`bin/${label} ${ok ? t('bin.ready') : t('bin.missing')}`}
-              className={clsx(
-                'px-1.5 py-0.5 rounded-full border inline-flex items-center gap-1',
-                ok ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300' : 'border-red-500/50 bg-red-500/10 text-red-300'
-              )}
-            >
-              {ok ? <CheckCircle2 className="w-2.5 h-2.5" /> : <XCircle className="w-2.5 h-2.5" />}
-              {label}
+          {binPreparing ? (
+            <span className="px-1.5 py-0.5 rounded-full border border-sky-500/40 bg-sky-500/10 text-sky-300 inline-flex items-center gap-1">
+              <Loader2 className="w-2.5 h-2.5 animate-spin" />
+              {t('bin.preparing')}
             </span>
-          ))}
+          ) : (
+            [
+              ['ffmpeg', binStatus?.ffmpeg],
+              ['ffprobe', binStatus?.ffprobe],
+              ['AviSynth', binStatus?.avisynth],
+              ['VSFilterMod', binStatus?.vsfiltermod],
+              ['VSFilter', binStatus?.vsfilter],
+            ].map(([label, ok]) => (
+              <span
+                key={label}
+                title={`bin/${label} ${ok ? t('bin.ready') : t('bin.missing')}`}
+                className={clsx(
+                  'px-1.5 py-0.5 rounded-full border inline-flex items-center gap-1',
+                  ok ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300' : 'border-red-500/50 bg-red-500/10 text-red-300'
+                )}
+              >
+                {ok ? <CheckCircle2 className="w-2.5 h-2.5" /> : <XCircle className="w-2.5 h-2.5" />}
+                {label}
+              </span>
+            ))
+          )}
         </div>
       </header>
 

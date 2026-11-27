@@ -1,0 +1,20 @@
+[package]
+name = "kull-app-backend"
+version = "2.1.0"
+edition = "2021"
+
+[workspace]
+
+[dependencies]
+kull-app = { path = ".." }
+kull-engine = { path = "../../kull-engine" }
+tauri = { version = "2", features = ["protocol-asset"] }
+rfd = "0.13"
+serde = "1"
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }

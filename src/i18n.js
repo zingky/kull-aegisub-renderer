@@ -16,6 +16,7 @@ const vi = {
   'lang.label': 'Ngôn ngữ',
   'bin.ready': 'đã sẵn sàng',
   'bin.missing': 'THIẾU — chạy npm run check:bin',
+  'bin.preparing': 'Đang chuẩn bị ffmpeg (lần đầu)…',
 
   // ── Tiêu đề các mục ──
   'sec1.title': '1 · File Nguồn',
@@ -98,6 +99,7 @@ const vi = {
 
   // ── Tiến trình ──
   'pg.rendering': 'Đang render…',
+  'pg.starting': 'Đang khởi động…',
   'pg.fps': 'FPS',
   'pg.eta': 'Còn lại:',
   'pg.doneTitle': 'Render thành công 100%',
@@ -128,6 +130,11 @@ const vi = {
   'msg.probing': '🔍 Đang phân tích: {name}…',
   'msg.probeOk': '✓ {name}: {res} @ {fps}fps · {dur} · bitrate ~{br}kbps',
   'msg.probeFail': '✗ Không đọc được {name}: {msg}',
+  'msg.videoInfo': '🎞 {name}\n   {res} · {fps} fps · {dur} · {vcodec} / {acodec}\n   bitrate ~{br}kbps · {size} · {path}',
+  'msg.noAudio': 'không có audio',
+  'msg.subInfo': '📝 {name}\n   {fmt} · {enc} · playres {res}\n   {dlg} dòng thoại · {styles} style · {fonts} font · {size}\n   Phụ đề: {first} → {last}\n   {path}',
+  'msg.subInfoFail': '✗ Không đọc được phụ đề {name}: {msg}',
+  'dz.subMeta': '{dlg} dòng thoại · {styles} style · {size}',
   'msg.openFolderFail': 'Không mở được thư mục: {msg}',
   'msg.needMain': '⚠ Vui lòng chọn File Video chính.',
   'msg.needSub': '⚠ Vui lòng chọn File Subtitle.',
@@ -184,6 +191,7 @@ const en = {
   'lang.label': 'Language',
   'bin.ready': 'ready',
   'bin.missing': 'MISSING — run npm run check:bin',
+  'bin.preparing': 'Preparing bundled ffmpeg (first run)…',
 
   // ── Section titles ──
   'sec1.title': '1 · Source Files',
@@ -266,6 +274,7 @@ const en = {
 
   // ── Progress ──
   'pg.rendering': 'Rendering…',
+  'pg.starting': 'Starting…',
   'pg.fps': 'FPS',
   'pg.eta': 'ETA:',
   'pg.doneTitle': 'Render completed 100%',
@@ -296,6 +305,11 @@ const en = {
   'msg.probing': '🔍 Analyzing: {name}…',
   'msg.probeOk': '✓ {name}: {res} @ {fps}fps · {dur} · bitrate ~{br}kbps',
   'msg.probeFail': '✗ Cannot read {name}: {msg}',
+  'msg.videoInfo': '🎞 {name}\n   {res} · {fps} fps · {dur} · {vcodec} / {acodec}\n   bitrate ~{br}kbps · {size} · {path}',
+  'msg.noAudio': 'no audio',
+  'msg.subInfo': '📝 {name}\n   {fmt} · {enc} · playres {res}\n   {dlg} dialogue lines · {styles} styles · {fonts} fonts · {size}\n   Subtitles: {first} → {last}\n   {path}',
+  'msg.subInfoFail': '✗ Cannot read subtitle {name}: {msg}',
+  'dz.subMeta': '{dlg} dialogue lines · {styles} styles · {size}',
   'msg.openFolderFail': 'Cannot open folder: {msg}',
   'msg.needMain': '⚠ Please select the main video file.',
   'msg.needSub': '⚠ Please select the subtitle file.',

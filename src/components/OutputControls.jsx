@@ -1,5 +1,6 @@
 import clsx from 'clsx'
 import { FolderOpen, Play, Square, FolderUp } from 'lucide-react'
+import renderAPI from '../renderAPI'
 
 const FORMATS = [
   { id: 'mp4', label: 'MP4', descKey: 'fmt.mp4.desc' },
@@ -24,7 +25,7 @@ export default function OutputControls({
   t,
 }) {
   const pickDir = async () => {
-    const d = await window.renderAPI.selectDir(lang)
+    const d = await renderAPI.selectDir(lang)
     if (d) setOutputDir(d)
   }
 

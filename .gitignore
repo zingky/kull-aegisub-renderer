@@ -5,3 +5,9 @@ release-new/
 *.log
 *.avs
 scripts/downloads/
+
+kull-app/src-tauri/assets/
+kull-app/src-tauri/target/
+kull-app/src-tauri/gen/
+Kull Aegisub Renderer.exe
+

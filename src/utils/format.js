@@ -18,15 +18,25 @@ export function extname(p) {
   return i >= 0 ? n.slice(i + 1).toLowerCase() : ''
 }
 
+// Đuôi file đã biết — chỉ cắt đuôi thật, không cắt nhầm dấu chấm trong tên.
+const KNOWN_EXTS = new Set([
+  'mp4', 'mkv', 'mov', 'm4v', 'webm', 'avi', 'mpg', 'mpeg', 'wmv', 'flv', 'ts', 'm2ts',
+  'gif', 'png', 'jpg', 'jpeg', 'webp', 'bmp', 'mp3', 'aac', 'wav', 'flac', 'ogg', 'opus',
+  'ass', 'ssa', 'srt', 'vtt', 'txt',
+])
+
 export function stripExt(name) {
   name = String(name ?? '')
   const i = name.lastIndexOf('.')
-  return i >= 0 ? name.slice(0, i) : name
+  if (i <= 0) return name
+  const ext = name.slice(i + 1).toLowerCase()
+  return KNOWN_EXTS.has(ext) ? name.slice(0, i) : name
 }
 
 export function withExt(name, ext) {
   ext = String(ext || '').startsWith('.') ? String(ext) : `.${ext}`
-  return `${stripExt(String(name ?? '').trim() || 'output')}${ext.toLowerCase()}`
+  const base = stripExt(String(name ?? '').trim()).trim() || 'output'
+  return `${base}${ext.toLowerCase()}`
 }
 
 export function formatBytes(bytes) {

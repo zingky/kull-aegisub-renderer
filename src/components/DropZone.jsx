@@ -2,6 +2,7 @@ import { useState } from 'react'
 import clsx from 'clsx'
 import { FileVideo, FileText, Clapperboard, UploadCloud, X, Image } from 'lucide-react'
 import { basename, formatBytes, formatDuration } from '../utils/format'
+import renderAPI from '../renderAPI'
 
 const VIDEO_EXTS = ['mp4', 'mkv', 'avi', 'mov', 'm4v', 'wmv', 'webm', 'ts', 'flv', 'mpg', 'mpeg']
 const SUBTITLE_EXTS = ['ass', 'ssa', 'srt']
@@ -41,7 +42,7 @@ export default function DropZone({ slot, file, meta, onFile, onClear, required =
           { name: t('dz.filterAll'), extensions: ['*'] },
         ]
       : [{ name: t('dz.filterSubtitle'), extensions: SUBTITLE_EXTS }]
-    const picked = await window.renderAPI.selectFile({
+    const picked = await renderAPI.selectFile({
       title: t('dz.dialogTitle', { label }),
       filters,
     })
@@ -53,11 +54,12 @@ export default function DropZone({ slot, file, meta, onFile, onClear, required =
     setDrag(false)
     if (disabled) return
     const f = e.dataTransfer?.files?.[0]
-    if (f) onFile(window.renderAPI.getPathForFile(f))
+    if (f) onFile(renderAPI.getPathForFile(f))
   }
 
   return (
     <div
+      data-dropzone-slot={slot}
       onClick={browse}
       onDragOver={(e) => {
         e.preventDefault()
@@ -99,7 +101,16 @@ export default function DropZone({ slot, file, meta, onFile, onClear, required =
             <p className="text-[11px] text-slate-500 leading-tight truncate">
               {EXT_HINTS[slot]}
             </p>
-            {meta && (
+            {meta && slot === 'subtitle' && (
+              <p className="text-[11px] text-slate-400 truncate">
+                {t('dz.subMeta', {
+                  dlg: meta.dialogues ?? 0,
+                  styles: (meta.styles || []).length,
+                  size: formatBytes(meta.sizeBytes),
+                })}
+              </p>
+            )}
+            {meta && slot !== 'subtitle' && (
               <p className="text-[11px] text-slate-400 truncate">
                 {meta.width ? `${meta.width}×${meta.height}` : '??'} ·{' '}
                 {meta.fps ? `${meta.fps}fps` : '??fps'} ·{' '}
