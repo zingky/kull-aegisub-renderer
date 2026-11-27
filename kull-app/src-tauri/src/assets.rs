@@ -19,7 +19,6 @@ use flate2::read::DeflateDecoder;
 
 static ARCHIVE: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/kull_assets.bin"));
 
-const MARKER: &str = ".kull-assets";
 const LOCK: &str = ".kull-extract.lock";
 
 const REQUIRED: &[&str] = &[
@@ -51,10 +50,6 @@ fn detect_root() -> PathBuf {
     }
     kull_engine::path::local_data_root()
         .unwrap_or_else(|| std::env::temp_dir().join("Kull Aegisub Renderer"))
-}
-
-fn marker_value() -> String {
-    format!("{}|{}", env!("CARGO_PKG_VERSION"), ARCHIVE.len())
 }
 
 fn all_present(root: &Path) -> bool {
@@ -90,11 +85,7 @@ pub fn ensure_bin_assets() -> Result<PathBuf, String> {
 }
 
 fn prepare(root: &Path) -> Result<(), String> {
-    let marker = root.join(MARKER);
-    let want = marker_value();
-
     if all_present(root) {
-        let _ = fs::write(&marker, want);
         return Ok(());
     }
 
@@ -105,7 +96,6 @@ fn prepare(root: &Path) -> Result<(), String> {
     if lock.exists() {
         for _ in 0..450 {
             if all_present(root) {
-                let _ = fs::write(&marker, want);
                 return Ok(());
             }
             std::thread::sleep(Duration::from_millis(200));
@@ -127,7 +117,6 @@ fn prepare(root: &Path) -> Result<(), String> {
             ));
         }
     }
-    fs::write(&marker, want).map_err(|e| format!("Không ghi được marker: {e}"))?;
     Ok(())
 }
 

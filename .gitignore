@@ -11,3 +11,5 @@ kull-app/src-tauri/target/
 kull-app/src-tauri/gen/
 Kull Aegisub Renderer.exe
 
+.kull-*
+
