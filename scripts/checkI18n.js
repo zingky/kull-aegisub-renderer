@@ -6,6 +6,7 @@
  */
 'use strict'
 const { JSDOM, VirtualConsole } = require('jsdom')
+const { installTauriStub } = require('./_tauriStub')
 const fs = require('fs')
 const path = require('path')
 
@@ -64,6 +65,7 @@ w.renderAPI = {
   onDone: () => () => {},
   onError: () => () => {},
 }
+installTauriStub(w)
 for (const k of ['window', 'document', 'navigator', 'Node', 'HTMLElement', 'getComputedStyle',
   'XMLHttpRequest', 'CustomEvent', 'Event', 'MouseEvent', 'File', 'Blob', 'URL']) {
   if (w[k] === undefined) continue

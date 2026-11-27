@@ -94,20 +94,25 @@ Desktop app that **burns (hardsubs) ASS/SRT subtitles into video** — **Tauri +
 
 ## 📦 Build your own
 
+Requires **Node 18+**, **Rust** (GNU toolchain pinned in `rust-toolchain.toml`) and **WebView2**.
+
 ```bash
 npm install
-npm run check:bin    # verify bin/ (prints download instructions if missing)
-npm run dist         # → release/KullAegisubRenderer-<version>-portable.exe  (~129 MB)
-                     #   release/KullAegisubRenderer-<version>-win-x64.zip   (~191 MB, starts in ~0.4s)
+npm run check:bin              # verify bin/ (prints download instructions if missing)
+npm run build                  # build the React UI → dist/
+npm run tauri -- build --no-bundle
+                               # → target/release/kull-app-backend.exe  (~98 MB)
 ```
 
-> Close any running app instance before building (locked files in `release/win-unpacked` break the build).
-> Dev mode: `npm run dev` · built app: `npm start`.
+During compilation `kull-app/src-tauri/build.rs` compresses `bin/` + `WebView2Loader.dll` and embeds them into the exe (208 MB → 76 MB), so **the resulting exe is the whole portable build** — no `bin/` folder needs to ship with it. Rename it however you like.
+
+> Close any running app instance before building/copying the exe.
+> Dev mode: `npm run dev`.
 
 ### Updating the Release body
 
 ```bash
-node scripts/setReleaseNotes.js docs/release-notes-v2.0.3.md v2.0.3
+node scripts/setReleaseNotes.js docs/release-notes-v2.1.0.md v2.1.0
 ```
 
 > ⚠️ **Never write release notes with PowerShell.** PowerShell 5 reads a BOM-less `.ps1` as ANSI (CP1252), so non-ASCII text is already corrupted before it reaches GitHub. The Node script above reads/writes proper UTF-8 and then **re-fetches the release and compares hashes** to prove the body matches the source file.
@@ -117,23 +122,12 @@ node scripts/setReleaseNotes.js docs/release-notes-v2.0.3.md v2.0.3
 ## 🧪 Tests
 
 ```bash
-npm run test:e2e      # creates a sample video + real render (libass + outro merge) with bin/ffmpeg.exe
-npm run test:repro    # regression: selecting a file must not crash the UI (jsdom + real bundle)
-npm run test:i18n     # bilingual: dictionary parity + VI/EN switch changes UI + localStorage persistence
-npm run test:trim     # real render: A→B trim, first/last fade (luminance check), export A→B clip
-node scripts/checkRows.js       # section 2 layout structure (buttons grouped per row)
-node scripts/checkQuality.js    # section 3 structure + console log + no heavy button effects
-node scripts/test-vsfilter.js   # real render through AviSynth+ (auto-swap VSFilterMod → VSFilter)
-node scripts/test-avs-dlls.js   # checks TextSub support of each DLL in bin/
-node scripts/checkIcon.ps1      # verify exe icon (pixel-hash against build/icon.ico)
-```
-
-Verify an extracted ZIP build (engine + `bin/` inside `resources/`) runs from any folder:
-
-```powershell
-$env:ELECTRON_RUN_AS_NODE='1'
-& "<extracted_folder>\Kull Aegisub Renderer.exe" scripts/zipRenderTest.js
-```
+cargo test -p kull-engine -- --test-threads=1   # real probe + render + intro/outro merge with bin/ffmpeg.exe
+npm run test:i18n                               # bilingual: dictionary parity + VI/EN switch + localStorage
+npm run test:arrow-step                         # real bundle (jsdom): ←/→ arrows seek by the chosen step
+npm run test:frame-step                         # regression: the "1 frame" button moves exactly one frame
+node scripts/checkRows.js                       # section 2 layout structure (buttons grouped per row)
+node scripts/checkQuality.js                    # section 3 structure + console log
 ```
 
 ---
@@ -155,10 +149,13 @@ Quick check: `npm run check:bin`
 ## 🗂️ Project structure
 
 ```
-electron/   main.js (IPC) · preload.js · ffmpegEngine.js (core engine) · i18n.js · paths.js
-src/        App.jsx · i18n.js (VI/EN dictionaries) · components/ (8 UI + LangSwitch + ErrorBoundary) · utils/
-scripts/    checkBin · e2eTest · repro-select · checkI18n · checkRows · checkQuality · test-vsfilter · test-vsfm-effects · test-avs-seek · test-avs-dlls · test-encoder-probe · test-frame-step · test-arrow-step · test-output-format · test-clip-audio · check-asar · zipRenderTest · afterPackIcon · setReleaseNotes
-bin/        ffmpeg · ffprobe · AviSynth.dll · VSFilter*.dll · avsplugins/
+kull-app/
+  src/          React UI (App.jsx · i18n.js · components/ · utils/ · renderAPI.ts)
+  src-tauri/    Tauri backend (Rust): IPC commands, assets.rs extractor, wv2.rs shim, build.rs asset packer
+kull-engine/    Rust render core: probe · subtitle · encoder · render · concat · trim · win (console hiding)
+src/            frontend (Vite root)
+scripts/        checkBin · checkI18n · checkRows · checkQuality · setReleaseNotes · createRelease
+bin/            ffmpeg · ffprobe · AviSynth.dll · VSFilter*.dll · avsplugins/  (build-time only)
 ```
 
 ---

@@ -9,6 +9,7 @@
  */
 'use strict'
 const { JSDOM, VirtualConsole } = require('jsdom')
+const { installTauriStub } = require('./_tauriStub')
 
 let fail = 0
 const ok = (cond, msg) => { console.log(`  ${cond ? '✅' : '❌'} ${msg}`); if (!cond) fail++ }
@@ -49,7 +50,14 @@ w.renderAPI = {
   onLog: () => () => {},
   onDone: () => () => {},
   onError: () => () => {},
+  extractThumbs: async () => ({ thumbs: [], dir: null }),
+  cleanupThumbs: () => {},
 }
+installTauriStub(w, {
+  select_file: () => FAKE_VIDEO,
+  select_dir: () => 'D:\\fake',
+  probe_media: () => ({ duration: DURATION, fps: FPS, width: 1920, height: 1080, videoCodec: 'h264', hasAudio: true }),
+})
 for (const k of ['window', 'document', 'navigator', 'Node', 'HTMLElement', 'getComputedStyle',
   'XMLHttpRequest', 'CustomEvent', 'Event', 'MouseEvent', 'KeyboardEvent', 'File', 'Blob', 'URL']) {
   if (w[k] === undefined) continue

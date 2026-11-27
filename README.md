@@ -94,20 +94,25 @@ App desktop **ghép cứng phụ đề ASS/SRT vào video (Hardsub)** — **Taur
 
 ## 📦 Tự build EXE portable
 
+Yêu cầu: **Node 18+**, **Rust** (toolchain GNU đã ghim trong `rust-toolchain.toml`) và **WebView2**.
+
 ```bash
 npm install
-npm run check:bin    # kiểm tra bin/ (hướng dẫn tải nếu thiếu)
-npm run dist         # → release/KullAegisubRenderer-<version>-portable.exe  (~129 MB)
-                     #   release/KullAegisubRenderer-<version>-win-x64.zip   (~191 MB, mở app ~0.4s)
+npm run check:bin              # kiểm tra bin/ (hướng dẫn tải nếu thiếu)
+npm run build                  # build giao diện React → dist/
+npm run tauri -- build --no-bundle
+                               # → target/release/kull-app-backend.exe  (~98 MB)
 ```
 
-> Đóng app đang chạy trước khi build (file trong `release/win-unpacked` bị khóa sẽ làm build lỗi).
-> Chạy dev: `npm run dev` · chạy bản build: `npm start`.
+Lúc biên dịch, `kull-app/src-tauri/build.rs` nén `bin/` + `WebView2Loader.dll` rồi nhúng thẳng vào exe (208 MB → 76 MB), nên **file exe sinh ra là bản portable duy nhất** — không cần `bin/` đi kèm. Đổi tên exe tùy ý.
+
+> Đóng app đang chạy trước khi build/copy exe.
+> Chạy dev: `npm run dev`.
 
 ### Cập nhật nội dung Release
 
 ```bash
-node scripts/setReleaseNotes.js docs/release-notes-v2.0.3.md v2.0.3
+node scripts/setReleaseNotes.js docs/release-notes-v2.1.0.md v2.1.0
 ```
 
 > ⚠️ **Đừng dùng PowerShell để ghi release notes.** PowerShell 5 đọc file `.ps1` không BOM theo bảng mã ANSI (CP1252) nên tiếng Việt bị hỏng ngay trước khi gửi lên GitHub → release hiển thị dạng `ghĂ©p cá»©ng phá»¥ Ä‘á»‹`. Script Node ở trên đọc/ghi UTF-8 chuẩn, sau khi ghi còn **tự GET lại và so hash** để chắc chắn nội dung khớp file gốc.
@@ -117,22 +122,12 @@ node scripts/setReleaseNotes.js docs/release-notes-v2.0.3.md v2.0.3
 ## 🧪 Kiểm thử
 
 ```bash
-npm run test:e2e      # tạo video mẫu + render thật (libass + ghép outro) bằng bin/ffmpeg.exe
-npm run test:repro    # hồi quy: chọn file không được làm crash UI (jsdom + bundle thật)
-npm run test:i18n     # song ngữ: parity từ điển + nút VI/EN đổi UI + lưu localStorage
-npm run test:trim     # render thật: cắt A→B, fade đầu/cuối (đo luminance), export clip A→B
-node scripts/checkRows.js       # cấu trúc layout mục 2 (nhóm nút theo hàng)
-node scripts/checkQuality.js    # cấu trúc mục 3 + console log + nút không còn hiệu ứng nặng
-node scripts/test-vsfilter.js   # render thật qua AviSynth+ (auto-swap VSFilterMod → VSFilter)
-node scripts/test-avs-dlls.js   # kiểm tra TextSub của từng DLL trong bin
-node scripts/checkIcon.ps1      # kiểm tra icon trong exe (đối chiếu hash pixel với build/icon.ico)
-```
-
-Kiểm tra bản ZIP đã giải nén (engine + `bin/` trong `resources/`) chạy đúng từ thư mục bất kỳ:
-
-```powershell
-$env:ELECTRON_RUN_AS_NODE='1'
-& "<thư_mục_đã_giải_nén>\Kull Aegisub Renderer.exe" scripts/zipRenderTest.js
+cargo test -p kull-engine -- --test-threads=1   # probe + render + ghép intro/outro thật bằng bin/ffmpeg.exe
+npm run test:i18n                               # song ngữ: parity từ điển + nút VI/EN + localStorage
+npm run test:arrow-step                         # bundle thật (jsdom): mũi tên ←/→ tua đúng bước
+npm run test:frame-step                         # hồi quy: nút "1 frame" lệch đúng 1 khung
+node scripts/checkRows.js                       # cấu trúc layout mục 2 (nhóm nút theo hàng)
+node scripts/checkQuality.js                    # cấu trúc mục 3 + console log
 ```
 
 ---
@@ -154,10 +149,13 @@ Kiểm tra nhanh: `npm run check:bin`
 ## 🗂️ Cấu trúc
 
 ```
-electron/   main.js (IPC) · preload.js · ffmpegEngine.js (Core Engine) · i18n.js · paths.js
-src/        App.jsx · i18n.js (từ điển VI/EN) · components/ (8 UI + LangSwitch + ErrorBoundary) · utils/
-scripts/    checkBin · e2eTest · repro-select · checkI18n · checkRows · checkQuality · test-vsfilter · test-vsfm-effects · test-avs-seek · test-avs-dlls · test-encoder-probe · test-frame-step · test-arrow-step · test-output-format · test-clip-audio · check-asar · zipRenderTest · afterPackIcon · setReleaseNotes
-bin/        ffmpeg · ffprobe · AviSynth.dll · VSFilter*.dll · avsplugins/
+kull-app/
+  src/          giao diện React (App.jsx · i18n.js · components/ · utils/ · renderAPI.ts)
+  src-tauri/    backend Tauri (Rust): lệnh IPC, assets.rs giải nén, wv2.rs shim, build.rs nhúng bin/
+kull-engine/    lõi render Rust: probe · subtitle · encoder · render · concat · trim · win (ẩn console)
+src/            giao diện (Vite root)
+scripts/        checkBin · checkI18n · checkRows · checkQuality · setReleaseNotes · createRelease
+bin/            ffmpeg · ffprobe · AviSynth.dll · VSFilter*.dll · avsplugins/  (chỉ cần khi build)
 ```
 
 ---

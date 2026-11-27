@@ -2,30 +2,18 @@
   "name": "kull-aegisub-renderer",
   "productName": "Kull Aegisub Renderer",
   "version": "2.1.0",
-  "description": "Desktop app that hardsubs ASS/SRT subtitles into video (Vietsub) with FFmpeg + VSFilter — Electron + React + TailwindCSS",
-  "main": "electron/main.js",
+  "description": "Desktop app that hardsubs ASS/SRT subtitles into video (Vietsub) with FFmpeg + VSFilter — Tauri + Rust + React + TailwindCSS",
   "author": "Kull Aegisub",
   "license": "MIT",
   "scripts": {
     "dev": "concurrently -k -s first \"vite\" \"wait-on tcp:127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 tauri dev\"",
     "build": "vite build",
     "start": "npm run build && tauri start",
-    "check:bin": "node scripts/checkBin.js",
-    "test:e2e": "node scripts/e2eTest.js",
-    "test:repro": "node scripts/repro-select.js",
-    "test:i18n": "node scripts/checkI18n.js",
-    "test:trim": "node scripts/testTrimFade.js",
-    "test:vsfilter": "node scripts/test-vsfilter.js",
-    "test:vsfm-effects": "node scripts/test-vsfm-effects.js",
-    "test:avs-seek": "node scripts/test-avs-seek.js",
-    "test:enc-probe": "node scripts/test-encoder-probe.js",
-    "test:frame-step": "node scripts/test-frame-step.js",
-    "dist": "npm run build && electron-builder",
     "tauri": "tauri",
-    "test:asar": "node scripts/check-asar.js",
-    "test:format": "node scripts/test-output-format.js",
-    "test:clip-audio": "node scripts/test-clip-audio.js",
-    "test:arrow-step": "node scripts/test-arrow-step.js"
+    "check:bin": "node scripts/checkBin.js",
+    "test:i18n": "node scripts/checkI18n.js",
+    "test:arrow-step": "node scripts/test-arrow-step.js",
+    "test:frame-step": "node scripts/test-frame-step.js"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.12.5",
@@ -40,65 +28,10 @@
     "autoprefixer": "^10.4.20",
     "concurrently": "^9.0.1",
     "cross-env": "^7.0.3",
-    "electron": "^37.0.0",
-    "electron-builder": "^25.1.8",
     "jsdom": "^30.0.1",
     "postcss": "^8.4.47",
-    "rcedit": "^5.0.2",
     "tailwindcss": "^3.4.13",
     "vite": "^5.4.8",
     "wait-on": "^8.0.1"
-  },
-  "build": {
-    "appId": "com.kull.aegisubrenderer",
-    "productName": "Kull Aegisub Renderer",
-    "directories": {
-      "output": "release"
-    },
-    "compression": "normal",
-    "npmRebuild": false,
-    "afterPack": "scripts/afterPackIcon.js",
-    "files": [
-      "dist/**/*",
-      "electron/**/*",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "electron/icon.ico",
-        "to": "icon.ico"
-      },
-      {
-        "from": "bin",
-        "to": "bin"
-      }
-    ],
-    "win": {
-      "icon": "build/icon.ico",
-      "signAndEditExecutable": false,
-      "electronLanguages": [
-        "vi",
-        "en-US"
-      ],
-      "artifactName": "KullAegisubRenderer-${version}-win-${arch}.${ext}",
-      "target": [
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "portable": {
-      "artifactName": "KullAegisubRenderer-${version}-portable.exe",
-      "requestExecutionLevel": "user"
-    }
   }
 }
